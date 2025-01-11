@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		692DAE792D31EAFD00C9E29D /* BikerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 692DAE782D31EAFD00C9E29D /* BikerCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		69F539012D31CFD800AFBB3A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +28,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		692DAE722D31DE0800C9E29D /* BikerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = BikerCore; sourceTree = "<group>"; };
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F539002D31CFD800AFBB3A /* BikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				692DAE792D31EAFD00C9E29D /* BikerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,12 +78,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		692DAE772D31EAFD00C9E29D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		69F538E72D31CFD600AFBB3A = {
 			isa = PBXGroup;
 			children = (
+				692DAE722D31DE0800C9E29D /* BikerCore */,
 				69F538F22D31CFD600AFBB3A /* Biker */,
 				69F539032D31CFD800AFBB3A /* BikerTests */,
 				69F5390D2D31CFD800AFBB3A /* BikerUITests */,
+				692DAE772D31EAFD00C9E29D /* Frameworks */,
 				69F538F12D31CFD600AFBB3A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -112,6 +127,7 @@
 			);
 			name = Biker;
 			packageProductDependencies = (
+				692DAE782D31EAFD00C9E29D /* BikerCore */,
 			);
 			productName = Biker;
 			productReference = 69F538F02D31CFD600AFBB3A /* Biker.app */;
@@ -558,6 +574,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		692DAE782D31EAFD00C9E29D /* BikerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BikerCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 69F538E82D31CFD600AFBB3A /* Project object */;
 }
