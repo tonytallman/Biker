@@ -8,7 +8,8 @@
 import Foundation
 import Combine
 
-class FakeSpeedProvider: SpeedMetricProvider {
+/// Fake speed provider to be used while production providers are under development.
+final class FakeSpeedProvider: SpeedMetricProvider {
     let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(Measurement<UnitSpeed>(value: 20.0, unit: .milesPerHour))
         .eraseToAnyPublisher()
 }

@@ -1,13 +1,6 @@
 # Biker
 
-Biker is a simple iOS bike-computer app designed as a demonstration of software-design principles. This project is focused on clean, maintainable, and scalable code architecture, suitable for learning and teaching purposes.
-
-# Features
-
--	Basic Bike Metrics: Speed metric to start; other metrics later as time permits.
--	Minimalist Interface: The user interface is secondary for now and is not optimized.
--	Scalable Design: Built with extensibility in mind for future enhancements.
--	Best Practices: Focused on demonstrating dependency injection, independent modules, and SOLID principles.
+Biker is a simple iOS bike-computer app designed as a demonstration of software-design principles. This project is focused on clean, maintainable, and scalable code architecture. The UI is not the point of the app and will not be polished at first.
 
 # Objectives
 
@@ -48,16 +41,21 @@ The app utilizes local Swift packages to isolate functionality.
 ## Phase I
 - speed metric
 - fake speed source
+- speed-units preference
+
 ## Phase II
 - speed source based on on-device location services
+
 ## Phase III
 - BLE speed source
 - prioritized composite speed source, prioritizes BLE source over device location-service source
+
 ## Phase IV
 - cadence metric
 - fake cadence source
 - heart-rate metric
 - fake heart-rate source
+
 ## Phase V
 - demo mode
 - demo source for all metrics

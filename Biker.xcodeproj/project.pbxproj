@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
 		692DAE792D31EAFD00C9E29D /* BikerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 692DAE782D31EAFD00C9E29D /* BikerCore */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		69206DA62D3EDAFC00408EF5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		692DAE722D31DE0800C9E29D /* BikerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = BikerCore; sourceTree = "<group>"; };
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F539002D31CFD800AFBB3A /* BikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -88,6 +90,7 @@
 		69F538E72D31CFD600AFBB3A = {
 			isa = PBXGroup;
 			children = (
+				69206DA62D3EDAFC00408EF5 /* README.md */,
 				692DAE722D31DE0800C9E29D /* BikerCore */,
 				69F538F22D31CFD600AFBB3A /* Biker */,
 				69F539032D31CFD800AFBB3A /* BikerTests */,
@@ -228,6 +231,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				69206DA72D3EDAFC00408EF5 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
