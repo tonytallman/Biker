@@ -29,6 +29,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		6919220F2D442A78009C7051 /* SpeedFromLocationServices */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = SpeedFromLocationServices; sourceTree = "<group>"; };
+		691922102D443C91009C7051 /* Logging */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Logging; sourceTree = "<group>"; };
 		69206DA62D3EDAFC00408EF5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		692DAE722D31DE0800C9E29D /* BikerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = BikerCore; sourceTree = "<group>"; };
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -36,9 +38,22 @@
 		69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		691922122D44458F009C7051 /* Exceptions for "Biker" folder in "Biker" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 69F538EF2D31CFD600AFBB3A /* Biker */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		69F538F22D31CFD600AFBB3A /* Biker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				691922122D44458F009C7051 /* Exceptions for "Biker" folder in "Biker" target */,
+			);
 			path = Biker;
 			sourceTree = "<group>";
 		};
@@ -92,6 +107,8 @@
 			children = (
 				69206DA62D3EDAFC00408EF5 /* README.md */,
 				692DAE722D31DE0800C9E29D /* BikerCore */,
+				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
+				691922102D443C91009C7051 /* Logging */,
 				69F538F22D31CFD600AFBB3A /* Biker */,
 				69F539032D31CFD800AFBB3A /* BikerTests */,
 				69F5390D2D31CFD800AFBB3A /* BikerUITests */,
@@ -419,6 +436,8 @@
 				DEVELOPMENT_TEAM = 76MMS93BSG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Biker/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to display speed.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -448,6 +467,8 @@
 				DEVELOPMENT_TEAM = 76MMS93BSG;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Biker/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used to display speed.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
