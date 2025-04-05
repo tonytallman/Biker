@@ -9,11 +9,11 @@ import SwiftUI
 
 @main
 struct BikerApp: App {
-    let compositionRoot = CompositionRoot.shared
-    
+    let dependencyContainer = DependencyContainer.shared
+
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: compositionRoot.getContentViewModel())
+            ContentView(viewModel: dependencyContainer.getContentViewModel())
         }
     }
 }

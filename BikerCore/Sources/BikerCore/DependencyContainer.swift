@@ -1,5 +1,5 @@
 //
-//  CompositionRoot.swift
+//  DependencyContainer.swift
 //  BikerCore
 //
 //  Created by Tony Tallman on 1/10/25.
@@ -10,8 +10,8 @@ import SpeedFromLocationServices
 import Logging
 
 /// Creates the app objects and factories needed in the app. The only visible instance member is the ``getMetricsProvider()`` function. All other objects are accessed indirectly through the returned metrics provider.
-final class CompositionRoot {
-    static let shared = CompositionRoot()
+final class DependencyContainer {
+    static let shared = DependencyContainer()
 
     private init() {
         let speedService = SpeedService(logger: SpeedServiceLoggerAdaptor(loggingService: logger))

@@ -1,5 +1,5 @@
 //
-//  CompositionRoot.swift
+//  DependencyContainer.swift
 //  Biker
 //
 //  Created by Tony Tallman on 1/10/25.
@@ -8,9 +8,9 @@
 import Foundation
 import BikerCore
 
-/// Composition root for the Biker app. It exposes the root object, ``ContentViewModel``, from which all other objects are indirectly accessed.
-struct CompositionRoot {
-    static let shared = CompositionRoot()
+/// Dependency container and composition root for the Biker app. It exposes the root object, ``ContentViewModel``, from which all other objects are indirectly accessed.
+struct DependencyContainer {
+    static let shared = DependencyContainer()
 
     private init() { }
 
