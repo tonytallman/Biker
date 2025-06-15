@@ -7,7 +7,6 @@
 
 import Foundation
 import Combine
-import BikerCore
 
 final class ContentViewModel: ObservableObject {
     @Published var speed = "--"

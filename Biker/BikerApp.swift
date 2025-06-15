@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct BikerApp: App {
-    let dependencyContainer = DependencyContainer.shared
+    let dependencyContainer = DependencyContainer()
 
     var body: some Scene {
         WindowGroup {
