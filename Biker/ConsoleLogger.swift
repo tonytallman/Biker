@@ -7,7 +7,7 @@
 
 import Foundation
 
-public class LoggingService {
+public class ConsoleLogger {
     public init() {}
     
     public func log(_ message: String) {

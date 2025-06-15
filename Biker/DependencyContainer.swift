@@ -6,17 +6,25 @@
 //
 
 import Foundation
-import BikerCore
+import SpeedFromLocationServices
 
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``ContentViewModel``, from which all other objects are indirectly accessed.
 struct DependencyContainer {
     static let shared = DependencyContainer()
 
-    private init() { }
+    private let preferences = Preferences()
+    private let logger = ConsoleLogger()
+    private let speedProvider: SpeedMetricProvider
+    private let metricsProvider: MetricsProvider
+
+    private init() {
+        let speedService = SpeedService(logger: SpeedServiceLoggerAdaptor(loggingService: logger))
+        speedProvider = SpeedServiceAdaptor(speedService: speedService)
+            .inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        metricsProvider = MetricsProvider(speedMetricProvider: speedProvider)
+    }
 
     func getContentViewModel() -> ContentViewModel {
         ContentViewModel(metricsProvider: metricsProvider)
     }
-
-    private let metricsProvider = MetricsProvider.shared
 }

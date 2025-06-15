@@ -10,9 +10,9 @@ import Logging
 
 /// Adaptor that takes a ``LoggingService`` instance and makes it look like a ``SpeedFromLocationServices.Logger`` instance for use by that package.
 final class SpeedServiceLoggerAdaptor: SpeedFromLocationServices.Logger {
-    private let loggingService: LoggingService
+    private let loggingService: ConsoleLogger
 
-    init(loggingService: LoggingService) {
+    init(loggingService: ConsoleLogger) {
         self.loggingService = loggingService
     }
 

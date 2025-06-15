@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
-		692DAE792D31EAFD00C9E29D /* BikerCore in Frameworks */ = {isa = PBXBuildFile; productRef = 692DAE782D31EAFD00C9E29D /* BikerCore */; };
+		EA386B9B2DFF8E6400FEB1A1 /* SpeedFromLocationServices in Frameworks */ = {isa = PBXBuildFile; productRef = EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -30,9 +30,7 @@
 
 /* Begin PBXFileReference section */
 		6919220F2D442A78009C7051 /* SpeedFromLocationServices */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = SpeedFromLocationServices; sourceTree = "<group>"; };
-		691922102D443C91009C7051 /* Logging */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Logging; sourceTree = "<group>"; };
 		69206DA62D3EDAFC00408EF5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		692DAE722D31DE0800C9E29D /* BikerCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = BikerCore; sourceTree = "<group>"; };
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F539002D31CFD800AFBB3A /* BikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -74,7 +72,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				692DAE792D31EAFD00C9E29D /* BikerCore in Frameworks */,
+				EA386B9B2DFF8E6400FEB1A1 /* SpeedFromLocationServices in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -106,9 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				69206DA62D3EDAFC00408EF5 /* README.md */,
-				692DAE722D31DE0800C9E29D /* BikerCore */,
 				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
-				691922102D443C91009C7051 /* Logging */,
 				69F538F22D31CFD600AFBB3A /* Biker */,
 				69F539032D31CFD800AFBB3A /* BikerTests */,
 				69F5390D2D31CFD800AFBB3A /* BikerUITests */,
@@ -147,7 +143,7 @@
 			);
 			name = Biker;
 			packageProductDependencies = (
-				692DAE782D31EAFD00C9E29D /* BikerCore */,
+				EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */,
 			);
 			productName = Biker;
 			productReference = 69F538F02D31CFD600AFBB3A /* Biker.app */;
@@ -601,9 +597,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		692DAE782D31EAFD00C9E29D /* BikerCore */ = {
+		EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = BikerCore;
+			productName = SpeedFromLocationServices;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

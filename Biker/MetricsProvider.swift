@@ -9,8 +9,6 @@ import Foundation
 
 /// Provides all of the metrics to be collected and displayed in the app.
 final public class MetricsProvider {
-    public static let shared = DependencyContainer.shared.getMetricsProvider()
-
     public let speedMetricProvider: SpeedMetricProvider
 
     init(speedMetricProvider: SpeedMetricProvider) {
