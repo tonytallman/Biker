@@ -10,6 +10,7 @@ import Combine
 
 final public class ContentViewModel: ObservableObject {
     @Published public var speed = "--"
+    @Published public var speedUnits = "--"
     @Published public var time = "--"
     @Published public var distance = "--"
     @Published public var cadence = "--"
@@ -21,17 +22,19 @@ final public class ContentViewModel: ObservableObject {
             .sink { [weak self] speed in
                 guard let self else { return }
                 self.speed = speedFormatted(speed)
+                self.speedUnits = speed.unit.symbol
             }
             .store(in: &cancellables)
     }
 
     private func speedFormatted(_ speed: Measurement<UnitSpeed>) -> String {
-        speed.formatted()
+        String(format: "%.1f", speed.value)
     }
 
     #if DEBUG
     public init(speed: Measurement<UnitSpeed>) {
         self.speed = speedFormatted(speed)
+        self.speedUnits = speed.unit.symbol
     }
     #endif
 }

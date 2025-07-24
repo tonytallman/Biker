@@ -13,23 +13,16 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Image(systemName: "chevron.left")
-                    .foregroundStyle(.white)
-                    .font(.system(size: 24, weight: .bold))
-                    .padding(.leading, 24)
-                Spacer()
-            }
             Spacer()
             VStack(spacing: 12) {
                 Text(viewModel.speed)
                     .font(.system(size: 90, weight: .bold, design: .rounded))
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                    .foregroundStyle(.white)
-                Text("km/h")
+                    .foregroundStyle(Color.bikerText)
+                Text(viewModel.speedUnits)
                     .font(.title2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.bikerTextSecondary)
             }
             Spacer()
             HStack(spacing: 0) {
@@ -37,7 +30,7 @@ struct ContentView: View {
                     VStack(spacing: 6) {
                         Text(["TIME", "DISTANCE", "CADENCE"][index])
                             .font(.callout.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.8))
+                            .foregroundStyle(Color.bikerSectionText)
                             .textCase(.uppercase)
                         Text([
                             viewModel.time,
@@ -45,17 +38,17 @@ struct ContentView: View {
                             viewModel.cadence
                         ][index])
                             .font(.title.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.bikerSectionText)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 24)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color.bikerSectionBackground)
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding([.horizontal, .bottom], 16)
         }
-        .background(Color(.sRGB, white: 0.1, opacity: 1).ignoresSafeArea())
+        .background(Color.bikerBackground.ignoresSafeArea())
     }
 }
 
