@@ -10,6 +10,9 @@ import Combine
 
 final public class ContentViewModel: ObservableObject {
     @Published public var speed = "--"
+    @Published public var time = "--"
+    @Published public var distance = "--"
+    @Published public var cadence = "--"
 
     private var cancellables: Set<AnyCancellable> = []
 
