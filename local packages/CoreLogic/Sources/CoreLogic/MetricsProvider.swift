@@ -8,8 +8,8 @@
 import Foundation
 
 /// Provides all of the metrics to be collected and displayed in the app.
-final public class MetricsProvider {
-    public let speedMetricProvider: SpeedMetricProvider
+final class MetricsProvider {
+    let speedMetricProvider: SpeedMetricProvider
 
     init(speedMetricProvider: SpeedMetricProvider) {
         self.speedMetricProvider = speedMetricProvider

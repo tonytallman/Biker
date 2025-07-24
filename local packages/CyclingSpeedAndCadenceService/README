@@ -1,0 +1,3 @@
+# CyclingSpeedAndCadenceService
+
+A Swift package for interfacing with Bluetooth Low Energy (BLE) Cycling Speed and Cadence Service (CSCS) to provide speed and cadence data for a bike-computer application. This package is designed to demonstrate software-design principles such as modularity, separation of concerns, and protocol-oriented programming, serving as one of multiple data source packages in a modular bike-computer ecosystem.

@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 /// Any type that can provide speed values
-public protocol SpeedMetricProvider {
+protocol SpeedMetricProvider {
     /// A publisher of speed values
     var speed: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
 }

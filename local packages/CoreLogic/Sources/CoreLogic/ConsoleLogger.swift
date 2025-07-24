@@ -7,10 +7,8 @@
 
 import Foundation
 
-public class ConsoleLogger {
-    public init() {}
-    
-    public func log(_ message: String) {
+final class ConsoleLogger {
+    func log(_ message: String) {
         print(message)
     }
 }

@@ -8,8 +8,8 @@
 import Foundation
 import Combine
 
-final class ContentViewModel: ObservableObject {
-    @Published var speed = "--"
+final public class ContentViewModel: ObservableObject {
+    @Published public var speed = "--"
 
     private var cancellables: Set<AnyCancellable> = []
 
@@ -27,7 +27,7 @@ final class ContentViewModel: ObservableObject {
     }
 
     #if DEBUG
-    init(speed: Measurement<UnitSpeed>) {
+    public init(speed: Measurement<UnitSpeed>) {
         self.speed = speedFormatted(speed)
     }
     #endif

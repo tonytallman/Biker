@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
-		EA386B9B2DFF8E6400FEB1A1 /* SpeedFromLocationServices in Frameworks */ = {isa = PBXBuildFile; productRef = EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */; };
+		EA16D36A2E32AF6A00A2FFB6 /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +34,8 @@
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F539002D31CFD800AFBB3A /* BikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EA16D3662E32AB7800A2FFB6 /* CoreLogic */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CoreLogic; sourceTree = "<group>"; };
+		EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CyclingSpeedAndCadenceService; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -72,7 +74,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EA386B9B2DFF8E6400FEB1A1 /* SpeedFromLocationServices in Frameworks */,
+				EA16D36A2E32AF6A00A2FFB6 /* CoreLogic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,8 +105,8 @@
 		69F538E72D31CFD600AFBB3A = {
 			isa = PBXGroup;
 			children = (
+				EA16D3672E32AB9700A2FFB6 /* local packages */,
 				69206DA62D3EDAFC00408EF5 /* README.md */,
-				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
 				69F538F22D31CFD600AFBB3A /* Biker */,
 				69F539032D31CFD800AFBB3A /* BikerTests */,
 				69F5390D2D31CFD800AFBB3A /* BikerUITests */,
@@ -121,6 +123,16 @@
 				69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		EA16D3672E32AB9700A2FFB6 /* local packages */ = {
+			isa = PBXGroup;
+			children = (
+				EA16D3662E32AB7800A2FFB6 /* CoreLogic */,
+				EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */,
+				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
+			);
+			path = "local packages";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -143,7 +155,7 @@
 			);
 			name = Biker;
 			packageProductDependencies = (
-				EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */,
+				EA16D3692E32AF6A00A2FFB6 /* CoreLogic */,
 			);
 			productName = Biker;
 			productReference = 69F538F02D31CFD600AFBB3A /* Biker.app */;
@@ -601,9 +613,9 @@
 /* End XCConfigurationList section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		EA386B9A2DFF8E6400FEB1A1 /* SpeedFromLocationServices */ = {
+		EA16D3692E32AF6A00A2FFB6 /* CoreLogic */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = SpeedFromLocationServices;
+			productName = CoreLogic;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreLogic
 
 struct ContentView: View {
     @StateObject var viewModel: ContentViewModel
