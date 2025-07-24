@@ -13,3 +13,5 @@ protocol SpeedMetricProvider {
     /// A publisher of speed values
     var speed: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
 }
+
+typealias Speed = Measurement<UnitSpeed>

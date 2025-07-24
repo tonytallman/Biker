@@ -16,8 +16,7 @@ final public class DependencyContainer {
     private let metricsProvider: MetricsProvider
 
     public init() {
-        let speedService = SpeedService(logger: SpeedServiceLoggerAdaptor(loggingService: logger))
-        speedProvider = SpeedServiceAdaptor(speedService: speedService)
+        speedProvider = FakeSpeedProvider()
             .inUnits(preferences.speedUnits.eraseToAnyPublisher())
         metricsProvider = MetricsProvider(speedMetricProvider: speedProvider)
     }

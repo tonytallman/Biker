@@ -10,9 +10,13 @@ import Combine
 
 /// Decorator that converts a speed metric into the specified units.
 class SpeedInSpecifiedUnits: SpeedMetricProvider {
+    // Retain the wrapped instance.
+    private let speedMetric: SpeedMetricProvider
+    
     let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
 
     init(speedMetric: SpeedMetricProvider, speedUnits: AnyPublisher<UnitSpeed, Never>) {
+        self.speedMetric = speedMetric
         self.speed = Publishers.CombineLatest(speedMetric.speed, speedUnits)
             .map { $0.converted(to: $1) }
             .eraseToAnyPublisher()
