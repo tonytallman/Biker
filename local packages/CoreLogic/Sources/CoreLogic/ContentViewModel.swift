@@ -23,6 +23,11 @@ final public class ContentViewModel: ObservableObject {
                 guard let self else { return }
                 self.speed = speedFormatted(speed)
                 self.speedUnits = speed.unit.symbol
+                
+                // Send speed to watch app via WatchConnectivity
+                Task { @MainActor in
+                    WatchConnectivityService.shared.sendSpeed(speed: speed.value, units: speed.unit.symbol)
+                }
             }
             .store(in: &cancellables)
     }

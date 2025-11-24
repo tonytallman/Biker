@@ -11,7 +11,7 @@ import SwiftUI
 struct Biker_watch_app_Watch_AppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(viewModel: ContentViewModel())
         }
     }
 }
