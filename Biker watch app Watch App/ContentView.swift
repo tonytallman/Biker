@@ -34,5 +34,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(viewModel: ContentViewModel(speed: 18.4, unit: "mph"))
+    ContentView(viewModel: ContentViewModel())
 }

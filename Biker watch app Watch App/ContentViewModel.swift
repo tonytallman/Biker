@@ -3,16 +3,13 @@ import Combine
 import CoreLogic
 
 final class ContentViewModel: ObservableObject {
-    @Published var speed: Double
-    @Published var unit: String
+    @Published var speed: Double = 0.0
+    @Published var unit: String = ""
     
     private let watchConnectivityService = WatchConnectivityService.shared
     private var cancellables: Set<AnyCancellable> = []
 
-    init(speed: Double = 18.4, unit: String = "mph") {
-        self.speed = speed
-        self.unit = unit
-        
+    init() {
         // Subscribe to speed updates from phone app via WatchConnectivity
         watchConnectivityService.$receivedSpeed
             .compactMap { $0 }

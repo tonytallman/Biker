@@ -20,3 +20,9 @@ final class SpeedServiceAdaptor: SpeedMetricProvider {
             .eraseToAnyPublisher()
     }
 }
+
+extension SpeedFromLocationServices.SpeedService {
+    func asSpeedMetricProvider() -> SpeedServiceAdaptor {
+        SpeedServiceAdaptor(speedService: self)
+    }
+}
