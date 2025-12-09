@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import CoreLogic
 
-final class ContentViewModel: ObservableObject {
+final class DashboardViewModel: ObservableObject {
     @Published var speed: Double = 0.0
     @Published var unit: String = ""
     

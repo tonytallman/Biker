@@ -48,7 +48,7 @@ final public class SpeedService: NSObject {
 
     public func requestAuthorization() {
         if isAuthorized == .notRequested {
-            locationManager.requestAlwaysAuthorization()
+            locationManager.requestWhenInUseAuthorization()
         }
     }
 
@@ -60,15 +60,6 @@ final public class SpeedService: NSObject {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.activityType = .fitness
-        #if !os(watchOS)
-        locationManager.pausesLocationUpdatesAutomatically = false
-        #endif
-        
-        // Only enable background location updates if we have Always authorization
-        if locationManager.authorizationStatus == .authorizedAlways {
-            locationManager.allowsBackgroundLocationUpdates = true
-        }
-        
         locationManager.startUpdatingLocation()
     }
 }
@@ -88,17 +79,9 @@ extension SpeedService: CLLocationManagerDelegate {
 
     public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
-        case .authorizedAlways:
-            logger?.info("Location permissions authorized (Always).")
-            locationManager.allowsBackgroundLocationUpdates = true
-            #if !os(watchOS)
-            locationManager.pausesLocationUpdatesAutomatically = false
-            #endif
+        case .authorizedWhenInUse, .authorizedAlways:
+            logger?.info("Location permissions authorized.")
             locationManager.startUpdatingLocation()
-        case .authorizedWhenInUse:
-            logger?.info("Location permissions authorized (When In Use). Requesting Always authorization for background updates.")
-            // Request Always authorization if we only have When In Use
-            locationManager.requestAlwaysAuthorization()
         case .denied, .restricted:
             logger?.info("Location permissions denied or restricted.")
         default:

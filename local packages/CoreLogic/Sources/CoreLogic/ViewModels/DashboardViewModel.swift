@@ -1,6 +1,6 @@
 //
-//  BikerViewModel.swift
-//  Biker
+//  DashboardViewModel.swift
+//  CoreLogic
 //
 //  Created by Tony Tallman on 1/10/25.
 //
@@ -8,16 +8,26 @@
 import Foundation
 import Combine
 
-final public class ContentViewModel: ObservableObject {
-    @Published public var speed = "--"
-    @Published public var speedUnits = "--"
-    @Published public var time = "--"
-    @Published public var distance = "--"
-    @Published public var cadence = "--"
+/// Base class for dashboard view models.
+@MainActor
+open class DashboardViewModel: ObservableObject {
+    @Published public var speed: String = "--"
+    @Published public var speedUnits: String = "--"
+    @Published public var time: String = "--"
+    @Published public var distance: String = "--"
+    @Published public var cadence: String = "--"
+    
+    public init() {
+    }
+}
 
+/// Production implementation of DashboardViewModel
+final class ProductionDashboardViewModel: DashboardViewModel {
     private var cancellables: Set<AnyCancellable> = []
 
     init(metricsProvider: MetricsProvider) {
+        super.init()
+        
         metricsProvider.speedMetricProvider.speed
             .sink { [weak self] speed in
                 guard let self else { return }
@@ -35,11 +45,4 @@ final public class ContentViewModel: ObservableObject {
     private func speedFormatted(_ speed: Measurement<UnitSpeed>) -> String {
         String(format: "%.1f", speed.value)
     }
-
-    #if DEBUG
-    public init(speed: Measurement<UnitSpeed>) {
-        self.speed = speedFormatted(speed)
-        self.speedUnits = speed.unit.symbol
-    }
-    #endif
 }

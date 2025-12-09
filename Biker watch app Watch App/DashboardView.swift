@@ -7,8 +7,8 @@
 
 import SwiftUI
 
-struct ContentView: View {
-    @ObservedObject var viewModel: ContentViewModel
+struct DashboardView: View {
+    @ObservedObject var viewModel: DashboardViewModel
 
     var body: some View {
         ZStack {
@@ -34,5 +34,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(viewModel: ContentViewModel())
+    DashboardView(viewModel: DashboardViewModel())
 }

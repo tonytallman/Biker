@@ -11,47 +11,43 @@ import CoreLogic
 struct ContentView: View {
     @StateObject var viewModel: ContentViewModel
     
+    init(viewModel: ContentViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
+    
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-            VStack(spacing: 12) {
-                Text(viewModel.speed)
-                    .font(.system(size: 90, weight: .bold, design: .rounded))
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
-                    .foregroundStyle(Color.bikerText)
-                Text(viewModel.speedUnits)
-                    .font(.title2.weight(.medium))
-                    .foregroundStyle(Color.bikerTextSecondary)
-            }
-            Spacer()
-            HStack(spacing: 0) {
-                ForEach(0..<3) { index in
-                    VStack(spacing: 6) {
-                        Text(["TIME", "DISTANCE", "CADENCE"][index])
-                            .font(.callout.weight(.semibold))
-                            .foregroundStyle(Color.bikerSectionText)
-                            .textCase(.uppercase)
-                        Text([
-                            viewModel.time,
-                            viewModel.distance,
-                            viewModel.cadence
-                        ][index])
-                            .font(.title.weight(.bold))
-                            .foregroundStyle(Color.bikerSectionText)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .background(Color.bikerSectionBackground)
+        TabView(selection: Binding(
+            get: { viewModel.selectedTab },
+            set: { viewModel.selectedTab = $0 }
+        )) {
+            DashboardView(viewModel: viewModel.getDashboardViewModel())
+                .tabItem {
+                    Label("Dashboard", systemImage: "speedometer")
                 }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-            .padding([.horizontal, .bottom], 16)
+                .tag(0)
+            
+            SettingsView(viewModel: viewModel.getSettingsViewModel())
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape.fill")
+                }
+                .tag(1)
         }
-        .background(Color.bikerBackground.ignoresSafeArea())
     }
 }
 
-#Preview {
-    ContentView(viewModel: ContentViewModel(speed: Measurement(value: 5.101, unit: .milesPerHour)))
+#if DEBUG
+final class PreviewContentViewModel: ContentViewModel {
+    override func getDashboardViewModel() -> DashboardViewModel {
+        PreviewDashboardViewModel()
+    }
+    
+    override func getSettingsViewModel() -> SettingsViewModel {
+        PreviewSettingsViewModel()
+    }
 }
+#endif
+
+#Preview {
+    ContentView(viewModel: PreviewContentViewModel())
+}
+
