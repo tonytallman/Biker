@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
 		EA16D36A2E32AF6A00A2FFB6 /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
+		EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */; };
 		EA69C86E2ED2A44900D3FE63 /* Biker Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = EA69C84E2ED2A44800D3FE63 /* Biker Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EAA821AC2ED2AA0E00E5132F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		EAA821AD2ED2AA0E00E5132F /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
@@ -74,6 +75,7 @@
 		69F5390A2D31CFD800AFBB3A /* BikerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA16D3662E32AB7800A2FFB6 /* CoreLogic */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CoreLogic; sourceTree = "<group>"; };
 		EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CyclingSpeedAndCadenceService; sourceTree = "<group>"; };
+		EA16D37C2E32AF7C00A2FFB7 /* DependencyContainer */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DependencyContainer; sourceTree = "<group>"; };
 		EA69C84E2ED2A44800D3FE63 /* Biker Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Biker Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA69C85A2ED2A44900D3FE63 /* Biker Watch App Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Biker Watch App Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA69C8642ED2A44900D3FE63 /* Biker Watch App UI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Biker Watch App UI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -130,6 +132,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */,
 				EAA821AD2ED2AA0E00E5132F /* CoreLogic in Frameworks */,
 				EAA821AC2ED2AA0E00E5132F /* (null) in Frameworks */,
 			);
@@ -215,6 +218,7 @@
 			children = (
 				EA16D3662E32AB7800A2FFB6 /* CoreLogic */,
 				EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */,
+				EA16D37C2E32AF7C00A2FFB7 /* DependencyContainer */,
 				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
 			);
 			path = "local packages";
@@ -242,6 +246,7 @@
 			);
 			name = Biker;
 			packageProductDependencies = (
+				EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */,
 				EA16D3692E32AF6A00A2FFB6 /* CoreLogic */,
 			);
 			productName = Biker;
@@ -1028,6 +1033,10 @@
 		EA16D3692E32AF6A00A2FFB6 /* CoreLogic */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = CoreLogic;
+		};
+		EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DependencyContainer;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

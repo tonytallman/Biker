@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreLogic
 import SpeedFromLocationServices
 
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``ContentViewModel``, from which all other objects are indirectly accessed.
@@ -43,5 +44,3 @@ final public class DependencyContainer {
         )
     }
 }
-
-extension Preferences: SettingsViewModel.Preferences {}

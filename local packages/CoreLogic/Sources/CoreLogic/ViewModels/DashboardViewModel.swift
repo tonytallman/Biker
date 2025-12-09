@@ -22,10 +22,10 @@ open class DashboardViewModel: ObservableObject {
 }
 
 /// Production implementation of DashboardViewModel
-final class ProductionDashboardViewModel: DashboardViewModel {
+public final class ProductionDashboardViewModel: DashboardViewModel {
     private var cancellables: Set<AnyCancellable> = []
 
-    init(metricsProvider: MetricsProvider) {
+    public init(metricsProvider: MetricsProvider) {
         super.init()
         
         metricsProvider.speedMetricProvider.speed

@@ -27,11 +27,11 @@ open class ContentViewModel: ObservableObject {
 }
 
 /// Production implementation of ContentViewModel
-final class ProductionContentViewModel: ContentViewModel {
+public final class ProductionContentViewModel: ContentViewModel {
     private let dashboardViewModelFactory: () -> DashboardViewModel
     private let settingsViewModelFactory: () -> SettingsViewModel
     
-    init(
+    public init(
         dashboardViewModelFactory: @escaping () -> DashboardViewModel,
         settingsViewModelFactory: @escaping () -> SettingsViewModel
     ) {
@@ -40,11 +40,11 @@ final class ProductionContentViewModel: ContentViewModel {
         super.init()
     }
     
-    override func getDashboardViewModel() -> DashboardViewModel {
+    override public func getDashboardViewModel() -> DashboardViewModel {
         dashboardViewModelFactory()
     }
     
-    override func getSettingsViewModel() -> SettingsViewModel {
+    override public func getSettingsViewModel() -> SettingsViewModel {
         settingsViewModelFactory()
     }
 }

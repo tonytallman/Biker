@@ -7,13 +7,14 @@
 
 import Combine
 import Foundation
+import CoreLogic
 import SpeedFromLocationServices
 
 /// Adaptor that takes a ``SpeedService`` instance and makes it look like a ``SpeedMetricProvider`` instance.
-final class SpeedServiceAdaptor: SpeedMetricProvider {
-    let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
+public final class SpeedServiceAdaptor: SpeedMetricProvider {
+    public let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
 
-    init(speedService: SpeedFromLocationServices.SpeedService) {
+    public init(speedService: SpeedFromLocationServices.SpeedService) {
         // SpeedService.speed is in meters per second, according to the documentation.
         speed = speedService.speed
             .map { Measurement(value: $0, unit: .metersPerSecond) }
@@ -22,7 +23,7 @@ final class SpeedServiceAdaptor: SpeedMetricProvider {
 }
 
 extension SpeedFromLocationServices.SpeedService {
-    func asSpeedMetricProvider() -> SpeedServiceAdaptor {
+    public func asSpeedMetricProvider() -> SpeedServiceAdaptor {
         SpeedServiceAdaptor(speedService: self)
     }
 }

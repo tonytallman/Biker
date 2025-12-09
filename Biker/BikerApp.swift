@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import CoreLogic
+import DependencyContainer
 
 @main
 struct BikerApp: App {

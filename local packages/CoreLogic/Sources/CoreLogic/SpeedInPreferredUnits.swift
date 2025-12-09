@@ -9,13 +9,13 @@ import Foundation
 import Combine
 
 /// Decorator that converts a speed metric into the specified units.
-class SpeedInSpecifiedUnits: SpeedMetricProvider {
+public class SpeedInSpecifiedUnits: SpeedMetricProvider {
     // Retain the wrapped instance.
     private let speedMetric: SpeedMetricProvider
     
-    let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
+    public let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
 
-    init(speedMetric: SpeedMetricProvider, speedUnits: AnyPublisher<UnitSpeed, Never>) {
+    public init(speedMetric: SpeedMetricProvider, speedUnits: AnyPublisher<UnitSpeed, Never>) {
         self.speedMetric = speedMetric
         self.speed = Publishers.CombineLatest(speedMetric.speed, speedUnits)
             .map { $0.converted(to: $1) }
@@ -25,7 +25,7 @@ class SpeedInSpecifiedUnits: SpeedMetricProvider {
 
 extension SpeedMetricProvider {
     /// Decorates the speed metric to convert it to the specified speed units.
-    func inUnits(_ speedUnits: AnyPublisher<UnitSpeed, Never>) -> SpeedMetricProvider {
+    public func inUnits(_ speedUnits: AnyPublisher<UnitSpeed, Never>) -> SpeedMetricProvider {
         SpeedInSpecifiedUnits(speedMetric: self, speedUnits: speedUnits)
     }
 }

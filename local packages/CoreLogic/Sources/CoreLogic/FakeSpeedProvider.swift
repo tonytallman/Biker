@@ -9,15 +9,15 @@ import Foundation
 import Combine
 
 /// Fake speed provider to be used while production providers are under development.
-final class FakeSpeedProvider: SpeedMetricProvider {
+public final class FakeSpeedProvider: SpeedMetricProvider {
     private var timerCancellable: AnyCancellable?
     private let defaultSpeed = 20.0
     private let unit: UnitSpeed = .milesPerHour
     private let subject: CurrentValueSubject<Speed, Never>
 
-    let speed: AnyPublisher<Speed, Never>
+    public let speed: AnyPublisher<Speed, Never>
 
-    init() {
+    public init() {
         subject = CurrentValueSubject<Speed, Never>(.init(value: defaultSpeed, unit: unit))
         speed = subject.eraseToAnyPublisher()
 

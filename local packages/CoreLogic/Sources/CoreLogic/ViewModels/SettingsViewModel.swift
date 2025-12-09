@@ -48,8 +48,8 @@ open class SettingsViewModel: ObservableObject {
 }
 
 /// Production implementation of SettingsViewModel
-final class ProductionSettingsViewModel: SettingsViewModel {
-    override init(preferences: Preferences) {
+public final class ProductionSettingsViewModel: SettingsViewModel {
+    public override init(preferences: Preferences) {
         super.init(preferences: preferences)
     }
 }

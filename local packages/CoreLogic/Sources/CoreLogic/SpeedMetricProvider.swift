@@ -9,9 +9,9 @@ import Foundation
 import Combine
 
 /// Any type that can provide speed values
-protocol SpeedMetricProvider {
+public protocol SpeedMetricProvider {
     /// A publisher of speed values
     var speed: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
 }
 
-typealias Speed = Measurement<UnitSpeed>
+public typealias Speed = Measurement<UnitSpeed>

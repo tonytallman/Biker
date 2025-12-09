@@ -5,6 +5,7 @@
 //  Created by Tony Tallman on 1/24/25.
 //
 
+import CoreLogic
 import SpeedFromLocationServices
 
 /// Adaptor that takes a ``LoggingService`` instance and makes it look like a ``SpeedFromLocationServices.Logger`` instance for use by that package.
