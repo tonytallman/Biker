@@ -9,16 +9,31 @@ import Foundation
 import Combine
 
 class Preferences {
-    let speedUnits = CurrentValueSubject<UnitSpeed, Never>(UnitSpeed.milesPerHour)
-    let distanceUnits = CurrentValueSubject<UnitLength, Never>(UnitLength.miles)
+    // Private subjects to manage state internally
+    private let speedUnitsSubject = CurrentValueSubject<UnitSpeed, Never>(.milesPerHour)
+    private let distanceUnitsSubject = CurrentValueSubject<UnitLength, Never>(.miles)
 
+    // Public read-only publishers
+    var speedUnits: AnyPublisher<UnitSpeed, Never> { speedUnitsSubject.eraseToAnyPublisher() }
+    var distanceUnits: AnyPublisher<UnitLength, Never> { distanceUnitsSubject.eraseToAnyPublisher() }
+
+    // Setters to update values
+    func setSpeedUnits(_ units: UnitSpeed) {
+        speedUnitsSubject.send(units)
+    }
+
+    func setDistanceUnits(_ units: UnitLength) {
+        distanceUnitsSubject.send(units)
+    }
+
+    // Convenience helpers for common unit systems
     func useMetricUnits() {
-        speedUnits.send(.kilometersPerHour)
-        distanceUnits.send(.kilometers)
+        speedUnitsSubject.send(.kilometersPerHour)
+        distanceUnitsSubject.send(.kilometers)
     }
 
     func useImperialUnits() {
-        speedUnits.send(.milesPerHour)
-        distanceUnits.send(.miles)
+        speedUnitsSubject.send(.milesPerHour)
+        distanceUnitsSubject.send(.miles)
     }
 }

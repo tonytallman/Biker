@@ -33,7 +33,7 @@ final public class DependencyContainer {
     }
     
     private func getSettingsViewModel() -> SettingsViewModel {
-        ProductionSettingsViewModel()
+        ProductionSettingsViewModel(preferences: preferences)
     }
     
     public func getContentViewModel() -> ContentViewModel {
@@ -43,3 +43,5 @@ final public class DependencyContainer {
         )
     }
 }
+
+extension Preferences: SettingsViewModel.Preferences {}
