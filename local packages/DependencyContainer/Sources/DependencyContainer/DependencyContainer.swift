@@ -15,18 +15,23 @@ final public class DependencyContainer {
     private let preferences = Preferences()
     private let logger = ConsoleLogger()
     private let speedProvider: SpeedMetricProvider
+    private let cadenceProvider: CadenceMetricProvider
     private let metricsProvider: MetricsProvider
 
     public init() {
         #if DEBUG
         speedProvider = FakeSpeedProvider()
             .inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        cadenceProvider = FakeCadenceProvider()
+            .inUnits(.revolutionsPerMinute)
         #else
         speedProvider = SpeedService()
             .asSpeedMetricProvider()
             .inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        cadenceProvider = FakeCadenceProvider() // TODO: Replace with production cadence provider
+            .inUnits(.revolutionsPerMinute)
         #endif
-        metricsProvider = MetricsProvider(speedMetricProvider: speedProvider)
+        metricsProvider = MetricsProvider(speedMetricProvider: speedProvider, cadenceMetricProvider: cadenceProvider)
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
@@ -44,3 +49,4 @@ final public class DependencyContainer {
         )
     }
 }
+

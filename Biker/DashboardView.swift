@@ -29,26 +29,37 @@ struct DashboardView: View {
                     .foregroundStyle(Color.bikerTextSecondary)
             }
             Spacer()
-            HStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
                 ForEach(0..<3) { index in
-                    VStack(spacing: 6) {
+                    VStack(alignment: .center, spacing: 6) {
                         Text(["TIME", "DISTANCE", "CADENCE"][index])
                             .font(.callout.weight(.semibold))
                             .foregroundStyle(Color.bikerSectionText)
                             .textCase(.uppercase)
-                        Text([
-                            viewModel.time,
-                            viewModel.distance,
-                            viewModel.cadence
-                        ][index])
-                            .font(.title.weight(.bold))
-                            .foregroundStyle(Color.bikerSectionText)
+                        if index == 2 {
+                            // Cadence: centered value with units below
+                            VStack(spacing: 2) {
+                                Text(viewModel.cadence)
+                                    .font(.title.weight(.bold))
+                                    .foregroundStyle(Color.bikerSectionText)
+                                Text(viewModel.cadenceUnits)
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(Color.bikerSectionText.opacity(0.7))
+                            }
+                        } else {
+                            Text([
+                                viewModel.time,
+                                viewModel.distance
+                            ][index])
+                                .font(.title.weight(.bold))
+                                .foregroundStyle(Color.bikerSectionText)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .top)
                     .padding(.vertical, 24)
-                    .background(Color.bikerSectionBackground)
                 }
             }
+            .background(Color.bikerSectionBackground)
             .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
             .padding([.horizontal, .bottom], 16)
         }
@@ -63,7 +74,8 @@ final class PreviewDashboardViewModel: DashboardViewModel {
         speedUnits: String = "mph",
         time: String = "12:34",
         distance: String = "5.2 mi",
-        cadence: String = "85 rpm"
+        cadence: String = "85",
+        cadenceUnits: String = "rpm"
     ) {
         super.init()
         self.speed = speed
@@ -71,6 +83,7 @@ final class PreviewDashboardViewModel: DashboardViewModel {
         self.time = time
         self.distance = distance
         self.cadence = cadence
+        self.cadenceUnits = cadenceUnits
     }
 }
 #endif

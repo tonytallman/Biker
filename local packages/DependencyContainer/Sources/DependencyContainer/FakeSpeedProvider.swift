@@ -7,17 +7,18 @@
 
 import Foundation
 import Combine
+import CoreLogic
 
 /// Fake speed provider to be used while production providers are under development.
-public final class FakeSpeedProvider: SpeedMetricProvider {
+final class FakeSpeedProvider: SpeedMetricProvider {
     private var timerCancellable: AnyCancellable?
     private let defaultSpeed = 20.0
     private let unit: UnitSpeed = .milesPerHour
     private let subject: CurrentValueSubject<Speed, Never>
 
-    public let speed: AnyPublisher<Speed, Never>
+    let speed: AnyPublisher<Speed, Never>
 
-    public init() {
+    init() {
         subject = CurrentValueSubject<Speed, Never>(.init(value: defaultSpeed, unit: unit))
         speed = subject.eraseToAnyPublisher()
 

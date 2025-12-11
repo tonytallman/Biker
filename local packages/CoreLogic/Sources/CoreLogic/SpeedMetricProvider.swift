@@ -11,7 +11,7 @@ import Combine
 /// Any type that can provide speed values
 public protocol SpeedMetricProvider {
     /// A publisher of speed values
-    var speed: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
+    var speed: AnyPublisher<Speed, Never> { get }
 }
 
 public typealias Speed = Measurement<UnitSpeed>

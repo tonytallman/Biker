@@ -10,8 +10,10 @@ import Foundation
 /// Provides all of the metrics to be collected and displayed in the app.
 public final class MetricsProvider {
     public let speedMetricProvider: SpeedMetricProvider
+    public let cadenceMetricProvider: CadenceMetricProvider
 
-    public init(speedMetricProvider: SpeedMetricProvider) {
+    public init(speedMetricProvider: SpeedMetricProvider, cadenceMetricProvider: CadenceMetricProvider) {
         self.speedMetricProvider = speedMetricProvider
+        self.cadenceMetricProvider = cadenceMetricProvider
     }
 }

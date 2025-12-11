@@ -16,6 +16,7 @@ open class DashboardViewModel: ObservableObject {
     @Published public var time: String = "--"
     @Published public var distance: String = "--"
     @Published public var cadence: String = "--"
+    @Published public var cadenceUnits: String = "--"
     
     public init() {
     }
@@ -40,9 +41,21 @@ public final class ProductionDashboardViewModel: DashboardViewModel {
                 }
             }
             .store(in: &cancellables)
+        
+        metricsProvider.cadenceMetricProvider.cadence
+            .sink { [weak self] cadence in
+                guard let self else { return }
+                self.cadence = cadenceFormatted(cadence)
+                self.cadenceUnits = cadence.unit.symbol
+            }
+            .store(in: &cancellables)
     }
 
     private func speedFormatted(_ speed: Measurement<UnitSpeed>) -> String {
         String(format: "%.1f", speed.value)
+    }
+    
+    private func cadenceFormatted(_ cadence: Measurement<UnitFrequency>) -> String {
+        String(format: "%.0f", cadence.value)
     }
 }
