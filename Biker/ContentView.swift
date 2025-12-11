@@ -45,9 +45,9 @@ final class PreviewContentViewModel: ContentViewModel {
         PreviewSettingsViewModel()
     }
 }
-#endif
 
 #Preview {
     ContentView(viewModel: PreviewContentViewModel())
 }
 
+#endif

@@ -100,9 +100,9 @@ final class PreviewSettingsViewModel: SettingsViewModel {
         super.init(preferences: PreviewPreferences())
     }
 }
-#endif
 
 #Preview {
     SettingsView(viewModel: PreviewSettingsViewModel())
 }
 
+#endif

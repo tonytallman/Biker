@@ -5,6 +5,7 @@
 //  Created by Tony Tallman on 1/10/25.
 //
 
+import Combine
 import Foundation
 import CoreLogic
 import SpeedFromLocationServices
@@ -14,24 +15,29 @@ import SpeedFromLocationServices
 final public class DependencyContainer {
     private let preferences = Preferences()
     private let logger = ConsoleLogger()
-    private let speedProvider: SpeedMetricProvider
-    private let cadenceProvider: CadenceMetricProvider
     private let metricsProvider: MetricsProvider
+    
+    // Retain the publishers to keep their timers running
+    private let speedPublisher: AnyPublisher<Measurement<UnitSpeed>, Never>
+    private let cadencePublisher: AnyPublisher<Measurement<UnitFrequency>, Never>
+    
+    // Retain SpeedService to keep location manager running (needed as CLLocationManagerDelegate)
+    private let speedService: SpeedService
 
     public init() {
+        speedService = SpeedService()
         #if DEBUG
-        speedProvider = FakeSpeedProvider()
+        speedPublisher = FakeSpeedProvider.makeSpeed()
             .inUnits(preferences.speedUnits.eraseToAnyPublisher())
-        cadenceProvider = FakeCadenceProvider()
-            .inUnits(.revolutionsPerMinute)
+        cadencePublisher = FakeCadenceProvider.makeCadence()
+            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         #else
-        speedProvider = SpeedService()
-            .asSpeedMetricProvider()
+        speedPublisher = speedService.speed
             .inUnits(preferences.speedUnits.eraseToAnyPublisher())
-        cadenceProvider = FakeCadenceProvider() // TODO: Replace with production cadence provider
-            .inUnits(.revolutionsPerMinute)
+        cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
+            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         #endif
-        metricsProvider = MetricsProvider(speedMetricProvider: speedProvider, cadenceMetricProvider: cadenceProvider)
+        metricsProvider = MetricsProvider(speed: speedPublisher, cadence: cadencePublisher)
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {

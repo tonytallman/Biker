@@ -3,6 +3,7 @@
 
 import CoreLocation
 import Combine
+import Foundation
 
 /// Publishes speed from device location services. Speed is in meters per second.
 final public class SpeedService: NSObject {
@@ -12,9 +13,9 @@ final public class SpeedService: NSObject {
         case notRequested
     }
 
-    /// Speed, in meters per second, obtained from location services.
-    public let speed: AnyPublisher<Double, Never>
-    private let speedSubject = PassthroughSubject<Double, Never>()
+    /// Speed obtained from location services, in meters per second.
+    public let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
+    private let speedSubject = PassthroughSubject<Measurement<UnitSpeed>, Never>()
 
     /// Determines whether authorization has been granted, denied or not requested.
     public var isAuthorized: AuthorizationStatus {
@@ -69,7 +70,7 @@ extension SpeedService: CLLocationManagerDelegate {
         logger?.info("Updated location = \(locations.last?.speed.description ?? "nil")")
         guard let location = locations.last else { return }
         if location.speed >= 0 {
-            speedSubject.send(location.speed)
+            speedSubject.send(Measurement(value: location.speed, unit: .metersPerSecond))
         }
     }
 

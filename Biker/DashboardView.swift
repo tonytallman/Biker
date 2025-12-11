@@ -86,8 +86,9 @@ final class PreviewDashboardViewModel: DashboardViewModel {
         self.cadenceUnits = cadenceUnits
     }
 }
-#endif
 
 #Preview {
     DashboardView(viewModel: PreviewDashboardViewModel())
 }
+
+#endif

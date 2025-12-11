@@ -6,14 +6,15 @@
 //
 
 import Foundation
+import Combine
 
 /// Provides all of the metrics to be collected and displayed in the app.
 public final class MetricsProvider {
-    public let speedMetricProvider: SpeedMetricProvider
-    public let cadenceMetricProvider: CadenceMetricProvider
+    public let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
+    public let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>
 
-    public init(speedMetricProvider: SpeedMetricProvider, cadenceMetricProvider: CadenceMetricProvider) {
-        self.speedMetricProvider = speedMetricProvider
-        self.cadenceMetricProvider = cadenceMetricProvider
+    public init(speed: AnyPublisher<Measurement<UnitSpeed>, Never>, cadence: AnyPublisher<Measurement<UnitFrequency>, Never>) {
+        self.speed = speed
+        self.cadence = cadence
     }
 }

@@ -29,7 +29,7 @@ public final class ProductionDashboardViewModel: DashboardViewModel {
     public init(metricsProvider: MetricsProvider) {
         super.init()
         
-        metricsProvider.speedMetricProvider.speed
+        metricsProvider.speed
             .sink { [weak self] speed in
                 guard let self else { return }
                 self.speed = speedFormatted(speed)
@@ -42,7 +42,7 @@ public final class ProductionDashboardViewModel: DashboardViewModel {
             }
             .store(in: &cancellables)
         
-        metricsProvider.cadenceMetricProvider.cadence
+        metricsProvider.cadence
             .sink { [weak self] cadence in
                 guard let self else { return }
                 self.cadence = cadenceFormatted(cadence)
