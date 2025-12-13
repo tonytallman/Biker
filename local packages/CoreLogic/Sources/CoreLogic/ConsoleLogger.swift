@@ -5,8 +5,6 @@
 //  Created by Tony Tallman on 1/24/25.
 //
 
-import Foundation
-
 public final class ConsoleLogger {
     public init() {}
     

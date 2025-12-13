@@ -6,6 +6,7 @@
 //
 
 import Testing
+
 import SpeedFromLocationServices
 
 struct Test {

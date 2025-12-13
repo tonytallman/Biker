@@ -5,8 +5,8 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 public class Preferences {
     // Private subjects to manage state internally

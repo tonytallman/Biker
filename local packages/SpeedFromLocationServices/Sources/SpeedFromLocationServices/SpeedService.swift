@@ -1,8 +1,8 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
-import CoreLocation
 import Combine
+import CoreLocation
 import Foundation
 
 /// Publishes speed from device location services. Speed is in meters per second.

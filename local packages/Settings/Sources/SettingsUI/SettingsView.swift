@@ -1,22 +1,23 @@
 //
 //  SettingsView.swift
-//  Biker
+//  PhoneUI
 //
 //  Created by Tony Tallman on 1/10/25.
 //
 
 import SwiftUI
-import Combine
-import CoreLogic
 
-struct SettingsView: View {
-    @ObservedObject var viewModel: SettingsViewModel
+import DesignSystem
+import SettingsVM
+
+public struct SettingsView: View {
+    @State var viewModel: SettingsViewModel
     
-    init(viewModel: SettingsViewModel) {
-        _viewModel = ObservedObject(wrappedValue: viewModel)
+    public init(viewModel: SettingsViewModel) {
+        self.viewModel = viewModel
     }
     
-    var body: some View {
+    public var body: some View {
         VStack(spacing: 0) {
             Text("Settings")
                 .font(.largeTitle)
@@ -72,37 +73,3 @@ struct SettingsView: View {
         }
     }
 }
-
-#if DEBUG
-final class PreviewPreferences: SettingsViewModel.Preferences {
-    private let speedUnitsSubject = CurrentValueSubject<UnitSpeed, Never>(.milesPerHour)
-    private let distanceUnitsSubject = CurrentValueSubject<UnitLength, Never>(.miles)
-    
-    var speedUnits: AnyPublisher<UnitSpeed, Never> {
-        speedUnitsSubject.eraseToAnyPublisher()
-    }
-    
-    var distanceUnits: AnyPublisher<UnitLength, Never> {
-        distanceUnitsSubject.eraseToAnyPublisher()
-    }
-    
-    func setSpeedUnits(_ units: UnitSpeed) {
-        speedUnitsSubject.send(units)
-    }
-    
-    func setDistanceUnits(_ units: UnitLength) {
-        distanceUnitsSubject.send(units)
-    }
-}
-
-final class PreviewSettingsViewModel: SettingsViewModel {
-    init() {
-        super.init(preferences: PreviewPreferences())
-    }
-}
-
-#Preview {
-    SettingsView(viewModel: PreviewSettingsViewModel())
-}
-
-#endif

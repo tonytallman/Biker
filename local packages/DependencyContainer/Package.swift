@@ -7,8 +7,8 @@ let package = Package(
     name: "DependencyContainer",
     platforms: [
         .macOS(.v12),
-        .iOS(.v15),
-        .watchOS(.v8),
+        .iOS(.v17),
+        .watchOS(.v10),
         .tvOS(.v15)
     ],
     products: [
@@ -21,6 +21,9 @@ let package = Package(
     dependencies: [
         .package(path: "../CoreLogic"),
         .package(path: "../SpeedFromLocationServices"),
+        .package(path: "../MainView"),
+        .package(path: "../Settings"),
+        .package(path: "../Dashboard"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -29,7 +32,12 @@ let package = Package(
             name: "DependencyContainer",
             dependencies: [
                 "CoreLogic",
-                "SpeedFromLocationServices"
+                "SpeedFromLocationServices",
+                .product(name: "MainVM", package: "MainView"),
+                .product(name: "SettingsVM", package: "Settings"),
+                .product(name: "SettingsModel", package: "Settings"),
+                .product(name: "DashboardVM", package: "Dashboard"),
+                .product(name: "DashboardModel", package: "Dashboard")
             ]
         ),
         .testTarget(

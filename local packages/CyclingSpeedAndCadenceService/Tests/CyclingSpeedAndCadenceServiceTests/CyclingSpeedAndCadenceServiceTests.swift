@@ -1,4 +1,5 @@
 import Testing
+
 @testable import CyclingSpeedAndCadenceService
 
 @Test func example() async throws {

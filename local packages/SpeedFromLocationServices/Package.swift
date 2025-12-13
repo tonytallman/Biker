@@ -7,8 +7,8 @@ let package = Package(
     name: "SpeedFromLocationServices",
     platforms: [
         .macOS(.v12),
-        .iOS(.v15),
-        .watchOS(.v8),
+        .iOS(.v17),
+        .watchOS(.v10),
         .tvOS(.v15)
     ],
     products: [

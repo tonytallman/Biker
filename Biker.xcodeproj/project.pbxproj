@@ -11,6 +11,15 @@
 		EA16D36A2E32AF6A00A2FFB6 /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
 		EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */; };
 		EA69C86E2ED2A44900D3FE63 /* Biker Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = EA69C84E2ED2A44800D3FE63 /* Biker Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EA6B24C22EECB22F00CF5714 /* SettingsModel in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C12EECB22F00CF5714 /* SettingsModel */; };
+		EA6B24C42EECB22F00CF5714 /* SettingsUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C32EECB22F00CF5714 /* SettingsUI */; };
+		EA6B24C62EECB22F00CF5714 /* SettingsVM in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C52EECB22F00CF5714 /* SettingsVM */; };
+		EA6B24CA2EECB23300CF5718 /* DashboardModel in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C72EECB23000CF5715 /* DashboardModel */; };
+		EA6B24CB2EECB23400CF5719 /* DashboardVM in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C82EECB23100CF5716 /* DashboardVM */; };
+		EA6B24CC2EECB23500CF5720 /* DashboardUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C92EECB23200CF5717 /* DashboardUI */; };
+		EA75F8542EECB6B400867FE2 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = EA75F8532EECB6B400867FE2 /* DesignSystem */; };
+		EA7C87DC2EEAFCC700D73984 /* MainUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA7C87DD2EEAFCC800D73985 /* MainUI */; };
+		EA7C87DE2EEAFCC900D73986 /* MainVM in Frameworks */ = {isa = PBXBuildFile; productRef = EA7C87DF2EEAFCCA00D73987 /* MainVM */; };
 		EAA821AC2ED2AA0E00E5132F /* (null) in Frameworks */ = {isa = PBXBuildFile; };
 		EAA821AD2ED2AA0E00E5132F /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
 /* End PBXBuildFile section */
@@ -76,6 +85,10 @@
 		EA16D3662E32AB7800A2FFB6 /* CoreLogic */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CoreLogic; sourceTree = "<group>"; };
 		EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = CyclingSpeedAndCadenceService; sourceTree = "<group>"; };
 		EA16D37C2E32AF7C00A2FFB7 /* DependencyContainer */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DependencyContainer; sourceTree = "<group>"; };
+		EA16D3822E32AF9200A2FFBC /* MainView */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = MainView; sourceTree = "<group>"; };
+		EA16D37F2E32AF8F00A2FFB9 /* Settings */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Settings; sourceTree = "<group>"; };
+		EA16D3802E32AF9000A2FFBA /* DesignSystem */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DesignSystem; sourceTree = "<group>"; };
+		EA16D3812E32AF9100A2FFBB /* Dashboard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Dashboard; sourceTree = "<group>"; };
 		EA69C84E2ED2A44800D3FE63 /* Biker Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Biker Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA69C85A2ED2A44900D3FE63 /* Biker Watch App Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Biker Watch App Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		EA69C8642ED2A44900D3FE63 /* Biker Watch App UI Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Biker Watch App UI Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -135,6 +148,15 @@
 				EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */,
 				EAA821AD2ED2AA0E00E5132F /* CoreLogic in Frameworks */,
 				EAA821AC2ED2AA0E00E5132F /* (null) in Frameworks */,
+				EA75F8542EECB6B400867FE2 /* DesignSystem in Frameworks */,
+				EA6B24C22EECB22F00CF5714 /* SettingsModel in Frameworks */,
+				EA6B24C42EECB22F00CF5714 /* SettingsUI in Frameworks */,
+				EA6B24C62EECB22F00CF5714 /* SettingsVM in Frameworks */,
+				EA6B24CA2EECB23300CF5718 /* DashboardModel in Frameworks */,
+				EA6B24CB2EECB23400CF5719 /* DashboardVM in Frameworks */,
+				EA6B24CC2EECB23500CF5720 /* DashboardUI in Frameworks */,
+				EA7C87DC2EEAFCC700D73984 /* MainUI in Frameworks */,
+				EA7C87DE2EEAFCC900D73986 /* MainVM in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -213,12 +235,16 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		EA16D3672E32AB9700A2FFB6 /* local packages */ = {
+			EA16D3672E32AB9700A2FFB6 /* local packages */ = {
 			isa = PBXGroup;
 			children = (
 				EA16D3662E32AB7800A2FFB6 /* CoreLogic */,
 				EA16D3682E32AD8000A2FFB6 /* CyclingSpeedAndCadenceService */,
+				EA16D3812E32AF9100A2FFBB /* Dashboard */,
 				EA16D37C2E32AF7C00A2FFB7 /* DependencyContainer */,
+				EA16D3802E32AF9000A2FFBA /* DesignSystem */,
+				EA16D3822E32AF9200A2FFBC /* MainView */,
+				EA16D37F2E32AF8F00A2FFB9 /* Settings */,
 				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
 			);
 			path = "local packages";
@@ -248,6 +274,15 @@
 			packageProductDependencies = (
 				EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */,
 				EA16D3692E32AF6A00A2FFB6 /* CoreLogic */,
+				EA7C87DD2EEAFCC800D73985 /* MainUI */,
+				EA7C87DF2EEAFCCA00D73987 /* MainVM */,
+				EA6B24C12EECB22F00CF5714 /* SettingsModel */,
+				EA6B24C32EECB22F00CF5714 /* SettingsUI */,
+				EA6B24C52EECB22F00CF5714 /* SettingsVM */,
+				EA6B24C72EECB23000CF5715 /* DashboardModel */,
+				EA6B24C82EECB23100CF5716 /* DashboardVM */,
+				EA6B24C92EECB23200CF5717 /* DashboardUI */,
+				EA75F8532EECB6B400867FE2 /* DesignSystem */,
 			);
 			productName = Biker;
 			productReference = 69F538F02D31CFD600AFBB3A /* Biker.app */;
@@ -1037,6 +1072,42 @@
 		EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DependencyContainer;
+		};
+		EA6B24C12EECB22F00CF5714 /* SettingsModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SettingsModel;
+		};
+		EA6B24C32EECB22F00CF5714 /* SettingsUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SettingsUI;
+		};
+		EA6B24C52EECB22F00CF5714 /* SettingsVM */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SettingsVM;
+		};
+		EA75F8532EECB6B400867FE2 /* DesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DesignSystem;
+		};
+		EA6B24C72EECB23000CF5715 /* DashboardModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DashboardModel;
+		};
+		EA6B24C82EECB23100CF5716 /* DashboardVM */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DashboardVM;
+		};
+		EA6B24C92EECB23200CF5717 /* DashboardUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DashboardUI;
+		};
+		EA7C87DD2EEAFCC800D73985 /* MainUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MainUI;
+		};
+		EA7C87DF2EEAFCCA00D73987 /* MainVM */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MainVM;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

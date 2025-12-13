@@ -5,8 +5,8 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 import WatchConnectivity
 
 /// Service for sharing speed data between iOS and watchOS apps via WatchConnectivity
@@ -127,4 +127,3 @@ extension WatchConnectivityService: WCSessionDelegate {
     }
     #endif
 }
-

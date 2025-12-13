@@ -5,8 +5,8 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 extension Publisher where Failure == Never {
     /// Converts the measurement publisher to the specified units.

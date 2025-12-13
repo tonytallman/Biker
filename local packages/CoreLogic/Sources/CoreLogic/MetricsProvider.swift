@@ -5,8 +5,8 @@
 //  Created by Tony Tallman on 1/10/25.
 //
 
-import Foundation
 import Combine
+import Foundation
 
 /// Provides all of the metrics to be collected and displayed in the app.
 public final class MetricsProvider {

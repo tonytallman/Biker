@@ -1,41 +1,54 @@
 //
 //  SettingsViewModel.swift
-//  CoreLogic
+//  PhoneUI
 //
 //  Created by Tony Tallman on 1/10/25.
 //
 
-import Foundation
 import Combine
+import Foundation
+import Observation
+
+import SettingsModel
 
 /// Base class for settings view models.
 @MainActor
-open class SettingsViewModel: ObservableObject {
+@Observable
+open class SettingsViewModel {
     /// Protocol for preferences that can be used by SettingsViewModel
-    public protocol Preferences {
+    public protocol Settings {
         var speedUnits: AnyPublisher<UnitSpeed, Never> { get }
         var distanceUnits: AnyPublisher<UnitLength, Never> { get }
         func setSpeedUnits(_ units: UnitSpeed)
         func setDistanceUnits(_ units: UnitLength)
     }
     
-    private let preferences: Preferences
+    private let preferences: Settings
+    private var cancellables: Set<AnyCancellable> = []
     
-    @Published public var currentSpeedUnits: UnitSpeed = .milesPerHour
-    @Published public var currentDistanceUnits: UnitLength = .miles
+    public var currentSpeedUnits: UnitSpeed = .milesPerHour
+    public var currentDistanceUnits: UnitLength = .miles
     
     public let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     public let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
     
-    public init(preferences: Preferences) {
+    public init(preferences: Settings) {
         self.preferences = preferences
         
         // Subscribe to preference changes
         preferences.speedUnits
-            .assign(to: &$currentSpeedUnits)
+            .sink { [weak self] units in
+                guard let self else { return }
+                self.currentSpeedUnits = units
+            }
+            .store(in: &cancellables)
         
         preferences.distanceUnits
-            .assign(to: &$currentDistanceUnits)
+            .sink { [weak self] units in
+                guard let self else { return }
+                self.currentDistanceUnits = units
+            }
+            .store(in: &cancellables)
     }
     
     public func setSpeedUnits(_ units: UnitSpeed) {
@@ -49,7 +62,9 @@ open class SettingsViewModel: ObservableObject {
 
 /// Production implementation of SettingsViewModel
 public final class ProductionSettingsViewModel: SettingsViewModel {
-    public override init(preferences: Preferences) {
+    public override init(preferences: Settings) {
         super.init(preferences: preferences)
     }
 }
+
+extension SettingsModel.Settings: SettingsViewModel.Settings {}

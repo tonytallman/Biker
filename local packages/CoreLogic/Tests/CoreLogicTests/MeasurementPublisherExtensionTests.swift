@@ -5,9 +5,10 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import Testing
 import Combine
 import Foundation
+import Testing
+
 @testable import CoreLogic
 
 @Suite("MeasurementPublisherExtension Tests")

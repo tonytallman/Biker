@@ -7,13 +7,19 @@
 
 import Combine
 import Foundation
+
 import CoreLogic
+import DashboardModel
+import DashboardVM
+import MainVM
+import SettingsModel
+import SettingsVM
 import SpeedFromLocationServices
 
-/// Dependency container and composition root for the Biker app. It exposes the root object, ``ContentViewModel``, from which all other objects are indirectly accessed.
+/// Dependency container and composition root for the Biker app. It exposes the root object, ``MainViewModel``, from which all other objects are indirectly accessed.
 @MainActor
 final public class DependencyContainer {
-    private let preferences = Preferences()
+    private let preferences = Settings()
     private let logger = ConsoleLogger()
     private let metricsProvider: MetricsProvider
     
@@ -41,18 +47,17 @@ final public class DependencyContainer {
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
-        ProductionDashboardViewModel(metricsProvider: metricsProvider)
+        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher)
     }
     
-    private func getSettingsViewModel() -> SettingsViewModel {
-        ProductionSettingsViewModel(preferences: preferences)
+    private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
+        SettingsVM.SettingsViewModel(preferences: preferences)
     }
     
-    public func getContentViewModel() -> ContentViewModel {
-        return ProductionContentViewModel(
+    public func getMainViewModel() -> MainViewModel {
+        return MainViewModel(
             dashboardViewModelFactory: getDashboardViewModel,
-            settingsViewModelFactory: getSettingsViewModel,
+            settingsViewModelFactory: getSettingsViewModel
         )
     }
 }
-

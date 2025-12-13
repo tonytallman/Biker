@@ -1,5 +1,6 @@
-import Foundation
 import Combine
+import Foundation
+
 import CoreLogic
 
 final class DashboardViewModel: ObservableObject {

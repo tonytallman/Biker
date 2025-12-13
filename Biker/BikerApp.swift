@@ -6,7 +6,9 @@
 //
 
 import SwiftUI
+
 import DependencyContainer
+import MainUI
 
 @main
 struct BikerApp: App {
@@ -14,7 +16,7 @@ struct BikerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(viewModel: dependencyContainer.getContentViewModel())
+            MainView(viewModel: dependencyContainer.getMainViewModel())
         }
     }
 }
