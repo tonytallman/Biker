@@ -41,7 +41,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		6919220F2D442A78009C7051 /* SpeedFromLocationServices */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = SpeedFromLocationServices; sourceTree = "<group>"; };
+		6919220F2D442A78009C7051 /* MetricsFromCoreLocation */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = MetricsFromCoreLocation; sourceTree = "<group>"; };
 		69206DA62D3EDAFC00408EF5 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		69F538F02D31CFD600AFBB3A /* Biker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Biker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		69F539002D31CFD800AFBB3A /* BikerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = BikerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -163,7 +163,7 @@
 				EA16D3802E32AF9000A2FFBA /* DesignSystem */,
 				EA16D3822E32AF9200A2FFBC /* MainView */,
 				EA16D37F2E32AF8F00A2FFB9 /* Settings */,
-				6919220F2D442A78009C7051 /* SpeedFromLocationServices */,
+				6919220F2D442A78009C7051 /* MetricsFromCoreLocation */,
 			);
 			path = "local packages";
 			sourceTree = "<group>";

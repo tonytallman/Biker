@@ -1,18 +1,18 @@
 //
 //  Test.swift
-//  SpeedFromLocationServices
+//  MetricsFromCoreLocation
 //
 //  Created by Tony Tallman on 1/24/25.
 //
 
 import Testing
 
-import SpeedFromLocationServices
+import MetricsFromCoreLocation
 
 struct Test {
 
     @Test func testCreation() async throws {
-        let speedService = SpeedService()
+        let speedAndDistanceService = SpeedAndDistanceService()
     }
 
 }

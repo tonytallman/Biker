@@ -1,6 +1,6 @@
-#  SpeedFromLocationServices
+#  MetricsFromCoreLocation
 
-Exposes functionality to publish speed updates based on the device's location services.
+Exposes functionality to publish speed and distance updates based on the device's location services.
 
 ## Purpose
 

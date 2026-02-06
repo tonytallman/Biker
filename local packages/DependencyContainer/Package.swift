@@ -20,7 +20,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../CoreLogic"),
-        .package(path: "../SpeedFromLocationServices"),
+        .package(path: "../MetricsFromCoreLocation"),
         .package(path: "../MainView"),
         .package(path: "../Settings"),
         .package(path: "../Dashboard"),
@@ -32,7 +32,7 @@ let package = Package(
             name: "DependencyContainer",
             dependencies: [
                 "CoreLogic",
-                "SpeedFromLocationServices",
+                "MetricsFromCoreLocation",
                 .product(name: "MainVM", package: "MainView"),
                 .product(name: "SettingsVM", package: "Settings"),
                 .product(name: "SettingsModel", package: "Settings"),

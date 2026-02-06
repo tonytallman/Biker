@@ -22,15 +22,17 @@ public final class DashboardViewModel {
     
     private var cancellables: Set<AnyCancellable> = []
     
-    /// Initialize with publishers for speed, cadence, and time
+    /// Initialize with publishers for speed, cadence, time, and distance
     /// - Parameters:
     ///   - speed: Publisher of speed measurements
     ///   - cadence: Publisher of cadence measurements
     ///   - time: Publisher of time measurements
+    ///   - distance: Publisher of distance measurements
     public init(
         speed: AnyPublisher<Measurement<UnitSpeed>, Never>,
         cadence: AnyPublisher<Measurement<UnitFrequency>, Never>,
-        time: AnyPublisher<Measurement<UnitDuration>, Never>
+        time: AnyPublisher<Measurement<UnitDuration>, Never>,
+        distance: AnyPublisher<Measurement<UnitLength>, Never>
     ) {
         // Subscribe to speed publisher
         speed
@@ -67,6 +69,18 @@ public final class DashboardViewModel {
                 )
             }
             .store(in: &cancellables)
+        
+        // Subscribe to distance publisher
+        distance
+            .sink { [weak self] distanceMeasurement in
+                guard let self else { return }
+                self.secondaryMetric2 = Metric(
+                    title: "DISTANCE",
+                    value: self.formatDistance(distanceMeasurement),
+                    units: distanceMeasurement.unit.symbol
+                )
+            }
+            .store(in: &cancellables)
     }
     
     private func formatSpeed(_ speed: Measurement<UnitSpeed>) -> String {
@@ -88,5 +102,9 @@ public final class DashboardViewModel {
         } else {
             return String(format: "%d:%02d", minutes, seconds)
         }
+    }
+    
+    private func formatDistance(_ distance: Measurement<UnitLength>) -> String {
+        String(format: "%.2f", distance.value)
     }
 }

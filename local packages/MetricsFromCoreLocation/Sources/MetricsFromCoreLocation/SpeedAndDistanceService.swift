@@ -5,8 +5,8 @@ import Combine
 import CoreLocation
 import Foundation
 
-/// Publishes speed from device location services. Speed is in meters per second.
-final public class SpeedService: NSObject {
+/// Publishes speed and distance deltas from device location services. Speed is in meters per second. Distance deltas are in meters.
+final public class SpeedAndDistanceService: NSObject {
     public enum AuthorizationStatus {
         case yes
         case no
@@ -16,6 +16,12 @@ final public class SpeedService: NSObject {
     /// Speed obtained from location services, in meters per second.
     public let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
     private let speedSubject = PassthroughSubject<Measurement<UnitSpeed>, Never>()
+
+    /// Distance delta obtained from location services, in meters. These are instantaneous deltas that can be accumulated to get total distance.
+    public let distanceDelta: AnyPublisher<Measurement<UnitLength>, Never>
+    private let distanceDeltaSubject = PassthroughSubject<Measurement<UnitLength>, Never>()
+
+    private var previousLocation: CLLocation?
 
     /// Determines whether authorization has been granted, denied or not requested.
     public var isAuthorized: AuthorizationStatus {
@@ -37,6 +43,7 @@ final public class SpeedService: NSObject {
     public init(logger: Logger? = nil) {
         self.logger = logger
         speed = speedSubject.eraseToAnyPublisher()
+        distanceDelta = distanceDeltaSubject.eraseToAnyPublisher()
 
         super.init()
 
@@ -65,13 +72,22 @@ final public class SpeedService: NSObject {
     }
 }
 
-extension SpeedService: CLLocationManagerDelegate {
+extension SpeedAndDistanceService: CLLocationManagerDelegate {
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         logger?.info("Updated location = \(locations.last?.speed.description ?? "nil")")
         guard let location = locations.last else { return }
         if location.speed >= 0 {
             speedSubject.send(Measurement(value: location.speed, unit: .metersPerSecond))
         }
+        
+        // Calculate distance delta from previous location
+        if let previous = previousLocation {
+            let delta = location.distance(from: previous)
+            if delta > 0 {
+                distanceDeltaSubject.send(Measurement(value: delta, unit: .meters))
+            }
+        }
+        previousLocation = location
     }
 
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

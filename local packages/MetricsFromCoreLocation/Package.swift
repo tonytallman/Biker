@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "SpeedFromLocationServices",
+    name: "MetricsFromCoreLocation",
     platforms: [
         .macOS(.v12),
         .iOS(.v17),
@@ -14,17 +14,17 @@ let package = Package(
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "SpeedFromLocationServices",
-            targets: ["SpeedFromLocationServices"]),
+            name: "MetricsFromCoreLocation",
+            targets: ["MetricsFromCoreLocation"]),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "SpeedFromLocationServices"),
+            name: "MetricsFromCoreLocation"),
         .testTarget(
-            name: "SpeedFromLocationServicesTests",
-            dependencies: ["SpeedFromLocationServices"]
+            name: "MetricsFromCoreLocationTests",
+            dependencies: ["MetricsFromCoreLocation"]
         ),
     ]
 )
