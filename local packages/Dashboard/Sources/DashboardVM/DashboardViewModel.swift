@@ -22,13 +22,15 @@ public final class DashboardViewModel {
     
     private var cancellables: Set<AnyCancellable> = []
     
-    /// Initialize with publishers for speed and cadence
+    /// Initialize with publishers for speed, cadence, and time
     /// - Parameters:
     ///   - speed: Publisher of speed measurements
     ///   - cadence: Publisher of cadence measurements
+    ///   - time: Publisher of time measurements
     public init(
         speed: AnyPublisher<Measurement<UnitSpeed>, Never>,
-        cadence: AnyPublisher<Measurement<UnitFrequency>, Never>
+        cadence: AnyPublisher<Measurement<UnitFrequency>, Never>,
+        time: AnyPublisher<Measurement<UnitDuration>, Never>
     ) {
         // Subscribe to speed publisher
         speed
@@ -53,6 +55,18 @@ public final class DashboardViewModel {
                 )
             }
             .store(in: &cancellables)
+        
+        // Subscribe to time publisher
+        time
+            .sink { [weak self] timeMeasurement in
+                guard let self else { return }
+                self.secondaryMetric1 = Metric(
+                    title: "TIME",
+                    value: self.formatTime(timeMeasurement),
+                    units: ""
+                )
+            }
+            .store(in: &cancellables)
     }
     
     private func formatSpeed(_ speed: Measurement<UnitSpeed>) -> String {
@@ -61,5 +75,18 @@ public final class DashboardViewModel {
     
     private func formatCadence(_ cadence: Measurement<UnitFrequency>) -> String {
         String(format: "%.0f", cadence.value)
+    }
+    
+    private func formatTime(_ time: Measurement<UnitDuration>) -> String {
+        let totalSeconds = Int(time.converted(to: .seconds).value)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        let seconds = totalSeconds % 60
+        
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            return String(format: "%d:%02d", minutes, seconds)
+        }
     }
 }

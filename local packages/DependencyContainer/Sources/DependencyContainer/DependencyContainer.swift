@@ -29,6 +29,9 @@ final public class DependencyContainer {
     
     // Retain SpeedService to keep location manager running (needed as CLLocationManagerDelegate)
     private let speedService: SpeedService
+    
+    // Retain TimeService to keep timer running
+    private let timeService: TimeService
 
     public init() {
         speedService = SpeedService()
@@ -43,11 +46,15 @@ final public class DependencyContainer {
         cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         #endif
+        
+        // Create TimeService with 1 second period
+        timeService = TimeService(period: Measurement(value: 1.0, unit: .seconds))
+        
         metricsProvider = MetricsProvider(speed: speedPublisher, cadence: cadencePublisher)
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
-        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher)
+        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher, time: timeService.time)
     }
     
     private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
