@@ -18,4 +18,14 @@ extension Publisher where Failure == Never {
             .map { $0.converted(to: $1) }
             .eraseToAnyPublisher()
     }
+    
+    /// Accumulates measurement values into a running total.
+    /// The output uses the base unit for the dimension (e.g., meters for UnitLength).
+    /// Use `.inUnits()` after `.accumulated()` to convert to desired display units.
+    /// - Returns: A publisher that emits the accumulated sum after each input.
+    public func accumulated<UnitType: Dimension>() -> AnyPublisher<Measurement<UnitType>, Never> where Output == Measurement<UnitType> {
+        let zero = Measurement<UnitType>(value: 0, unit: UnitType.baseUnit())
+        return self.scan(zero, +)
+            .eraseToAnyPublisher()
+    }
 }

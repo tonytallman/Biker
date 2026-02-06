@@ -1,5 +1,5 @@
 //
-//  MeasurementPublisherExtensionTests.swift
+//  InUnitsPublisherExtensionTests.swift
 //  CoreLogicTests
 //
 //  Created by Tony Tallman on 1/20/25.
@@ -11,8 +11,8 @@ import Testing
 
 @testable import CoreLogic
 
-@Suite("MeasurementPublisherExtension Tests")
-struct MeasurementPublisherExtensionTests {
+@Suite("InUnits PublisherExtension Tests")
+struct InUnitsPublisherExtensionTests {
     
     @Test("Converts UnitSpeed measurements correctly")
     func testSpeedConversion() async throws {
