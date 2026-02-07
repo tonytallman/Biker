@@ -45,8 +45,11 @@ final public class DependencyContainer {
         timeService = TimeService(period: Measurement(value: 1.0, unit: .seconds))
         
         #if DEBUG
+        // Fake metrics with cadence as the single source of truth
+        let fake = FakeMetricsProvider.make()
+        
         // Raw speed (before unit conversion)
-        let rawSpeed = FakeSpeedProvider.makeSpeed()
+        let rawSpeed = fake.speed
         
         // Auto-pause service
         autoPauseService = AutoPauseService(
@@ -56,9 +59,9 @@ final public class DependencyContainer {
         
         // Display-converted speed
         speedPublisher = rawSpeed.inUnits(preferences.speedUnits.eraseToAnyPublisher())
-        cadencePublisher = FakeCadenceProvider.makeCadence()
+        cadencePublisher = fake.cadence
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
-        distancePublisher = FakeDistanceDeltaProvider.makeDistanceDelta()
+        distancePublisher = fake.distanceDelta
             .accumulating(whileActive: autoPauseService.activityState)
             .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
         #else
