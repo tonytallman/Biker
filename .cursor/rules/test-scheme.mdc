@@ -1,0 +1,89 @@
+# Test Scheme Maintenance Rule
+
+## Rule: Keep "All Tests" Scheme Updated
+
+Whenever a test target is added to the project or to a local Swift package, it must also be added to the "All Tests" scheme located at `Biker.xcodeproj/xcshareddata/xcschemes/All Tests.xcscheme`.
+
+### When This Rule Applies
+
+1. **Adding a test target to the Xcode project** (e.g., creating a new test target in `Biker.xcodeproj`)
+2. **Adding a `.testTarget` to any `Package.swift` file** in the `local packages/` directory
+
+### How to Add a Test Target to the Scheme
+
+1. Open the scheme file: `Biker.xcodeproj/xcshareddata/xcschemes/All Tests.xcscheme`
+2. Find the `<Testables>` section within the `<TestAction>` element
+3. Add a new `<TestableReference>` entry with the following structure:
+
+#### For Xcode Native Test Targets:
+```xml
+<TestableReference
+   skipped = "NO"
+   parallelizable = "YES"
+   testExecutionOrdering = "random">
+   <BuildableReference
+      BuildableIdentifier = "primary"
+      BlueprintIdentifier = "TARGET_BLUEPRINT_IDENTIFIER"
+      BuildableName = "TargetName.xctest"
+      BlueprintName = "TargetName"
+      ReferencedContainer = "container:Biker.xcodeproj">
+   </BuildableReference>
+</TestableReference>
+```
+
+Where `TARGET_BLUEPRINT_IDENTIFIER` is the hex identifier found in `Biker.xcodeproj/project.pbxproj` for the test target.
+
+#### For Swift Package Test Targets:
+```xml
+<TestableReference
+   skipped = "NO"
+   parallelizable = "YES"
+   testExecutionOrdering = "random">
+   <BuildableReference
+      BuildableIdentifier = "primary"
+      BlueprintIdentifier = "TestTargetName"
+      BuildableName = "TestTargetName"
+      BlueprintName = "TestTargetName"
+      ReferencedContainer = "container:local packages/PackageName">
+   </BuildableReference>
+</TestableReference>
+```
+
+Where:
+- `TestTargetName` is the name of the test target as defined in `Package.swift` (e.g., `CoreLogicTests`, `SettingsModelTests`)
+- `PackageName` is the name of the package directory (e.g., `CoreLogic`, `Settings`)
+
+### Example
+
+If adding a new test target `NewFeatureTests` to the `NewFeature` package:
+
+1. The `Package.swift` in `local packages/NewFeature/` would have:
+   ```swift
+   .testTarget(
+       name: "NewFeatureTests",
+       dependencies: ["NewFeature"]
+   )
+   ```
+
+2. Add to the scheme:
+   ```xml
+   <TestableReference
+      skipped = "NO"
+      parallelizable = "YES"
+      testExecutionOrdering = "random">
+      <BuildableReference
+         BuildableIdentifier = "primary"
+         BlueprintIdentifier = "NewFeatureTests"
+         BuildableName = "NewFeatureTests"
+         BlueprintName = "NewFeatureTests"
+         ReferencedContainer = "container:local packages/NewFeature">
+      </BuildableReference>
+   </TestableReference>
+   ```
+
+### Important Notes
+
+- Maintain alphabetical or logical grouping of test targets in the scheme file for readability
+- Keep the same attributes (`parallelizable = "YES"`, `testExecutionOrdering = "random"`) for consistency
+- The scheme file uses XML format - ensure proper indentation and closing tags
+- Test targets should be added immediately after creating them, not deferred

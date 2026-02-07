@@ -17,7 +17,7 @@ import Testing
 struct AutoPauseServiceTests {
     
     @Test("Emits active when speed is above threshold")
-    func testActiveWhenSpeedAboveThreshold() async throws {
+    func testActiveWhenSpeedAboveThreshold() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 5, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -26,18 +26,18 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (speed 5 > threshold 3)
-        let state = try #require(await iterator.next())
+        // Speed 5 > threshold 3, should be active
+        let state = try #require(values.last)
         #expect(state == .active)
+        
+        _ = subscription
     }
     
     @Test("Emits active when speed equals threshold")
-    func testActiveWhenSpeedEqualsThreshold() async throws {
+    func testActiveWhenSpeedEqualsThreshold() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -46,18 +46,18 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (speed 3 == threshold 3)
-        let state = try #require(await iterator.next())
+        // Speed 3 == threshold 3, should be active
+        let state = try #require(values.last)
         #expect(state == .active)
+        
+        _ = subscription
     }
     
     @Test("Emits paused when speed is below threshold")
-    func testPausedWhenSpeedBelowThreshold() async throws {
+    func testPausedWhenSpeedBelowThreshold() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 2, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -66,13 +66,17 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        let state = try #require(await iterator.next())
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
+        
+        let state = try #require(values.last)
         #expect(state == .paused)
+        
+        _ = subscription
     }
     
     @Test("Transitions from active to paused when speed drops")
-    func testTransitionActiveToPaused() async throws {
+    func testTransitionActiveToPaused() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 5, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -81,23 +85,23 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (speed 5 > threshold 3)
-        let first = try #require(await iterator.next())
-        #expect(first == .active)
+        // Initial state should be .active (speed 5 > threshold 3)
+        let initial = try #require(values.last)
+        #expect(initial == .active)
         
         // Drop speed below threshold
         speed.send(.init(value: 2, unit: .milesPerHour))
-        let second = try #require(await iterator.next())
-        #expect(second == .paused)
+        let updated = try #require(values.last)
+        #expect(updated == .paused)
+        
+        _ = subscription
     }
     
     @Test("Transitions from paused to active when speed rises")
-    func testTransitionPausedToActive() async throws {
+    func testTransitionPausedToActive() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 2, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -106,18 +110,22 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        let first = try #require(await iterator.next())
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
+        
+        let first = try #require(values.last)
         #expect(first == .paused)
         
         // Raise speed above threshold
         speed.send(.init(value: 5, unit: .milesPerHour))
-        let second = try #require(await iterator.next())
+        let second = try #require(values.last)
         #expect(second == .active)
+        
+        _ = subscription
     }
     
     @Test("Handles threshold changes correctly")
-    func testThresholdChanges() async throws {
+    func testThresholdChanges() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 4, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -126,28 +134,28 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (speed 4 > threshold 3)
-        let first = try #require(await iterator.next())
-        #expect(first == .active)
+        // Initial state should be .active (speed 4 > threshold 3)
+        let initial = try #require(values.last)
+        #expect(initial == .active)
         
         // Raise threshold above current speed
         threshold.send(.init(value: 5, unit: .milesPerHour))
-        let second = try #require(await iterator.next())
+        let second = try #require(values.last)
         #expect(second == .paused)
         
         // Lower threshold below current speed
         threshold.send(.init(value: 2, unit: .milesPerHour))
-        let third = try #require(await iterator.next())
+        let third = try #require(values.last)
         #expect(third == .active)
+        
+        _ = subscription
     }
     
     @Test("Works with different speed units")
-    func testDifferentSpeedUnits() async throws {
+    func testDifferentSpeedUnits() throws {
         // Speed in km/h, threshold in mph
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 10, unit: .kilometersPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
@@ -157,18 +165,18 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (10 km/h ≈ 6.2 mph, which is > 3 mph)
-        let state = try #require(await iterator.next())
+        // 10 km/h ≈ 6.2 mph, which is > 3 mph, should be active
+        let state = try #require(values.last)
         #expect(state == .active)
+        
+        _ = subscription
     }
     
     @Test("Does not emit duplicate states")
-    func testNoDuplicateStates() async throws {
+    func testNoDuplicateStates() throws {
         let speed = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 5, unit: .milesPerHour))
         let threshold = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
         
@@ -177,40 +185,20 @@ struct AutoPauseServiceTests {
             threshold: threshold.eraseToAnyPublisher()
         )
         
-        var iterator = service.activityState.values.makeAsyncIterator()
-        // First value is initial .paused state
-        let initial = try #require(await iterator.next())
-        #expect(initial == .paused)
+        var values: [ActivityState] = []
+        let subscription = service.activityState.sink { values.append($0) }
         
-        // Second value is .active (speed 5 > threshold 3)
-        let first = try #require(await iterator.next())
-        #expect(first == .active)
+        // Should have received initial state (.active since speed 5 > threshold 3)
+        let initialCount = values.count
         
         // Send same speed value multiple times (should not change state)
         speed.send(.init(value: 5, unit: .milesPerHour))
         speed.send(.init(value: 5, unit: .milesPerHour))
         speed.send(.init(value: 5, unit: .milesPerHour))
         
-        // Wait a bit to allow any emissions to propagate
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        // removeDuplicates() should prevent any additional emissions
+        #expect(values.count == initialCount)
         
-        // Verify no additional emissions occurred by using a timeout
-        // If removeDuplicates() is working, no new values should be emitted
-        let nextTask = Task {
-            await iterator.next()
-        }
-        
-        // Wait with timeout - if no value is emitted within 50ms, assume no duplicates
-        let timeoutTask = Task {
-            try await Task.sleep(nanoseconds: 50_000_000) // 50ms
-        }
-        
-        try await timeoutTask.value
-        // If we reach here, timeout occurred before next() completed
-        // This means no duplicate was emitted, which is what we want
-        nextTask.cancel()
-        
-        // Should not have emitted any new values since state didn't change
-        // (This test verifies removeDuplicates() is working)
+        _ = subscription
     }
 }
