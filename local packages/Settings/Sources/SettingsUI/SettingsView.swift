@@ -51,6 +51,28 @@ public struct SettingsView: View {
                         }
                     }
                 }
+                
+                Section(header: Text("Auto-Pause")) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Speed Threshold")
+                            Spacer()
+                            Text(String(format: "%.1f %@", viewModel.currentAutoPauseThreshold.converted(to: viewModel.currentSpeedUnits).value, viewModel.currentSpeedUnits.symbol))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Slider(
+                            value: Binding(
+                                get: { viewModel.currentAutoPauseThreshold.converted(to: viewModel.currentSpeedUnits).value },
+                                set: { newValue in
+                                    let newThreshold = Measurement(value: newValue, unit: viewModel.currentSpeedUnits)
+                                    viewModel.setAutoPauseThreshold(newThreshold)
+                                }
+                            ),
+                            in: 0...10
+                        )
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

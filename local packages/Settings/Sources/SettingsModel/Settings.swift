@@ -12,10 +12,12 @@ public class Settings {
     // Private subjects to manage state internally
     private let speedUnitsSubject = CurrentValueSubject<UnitSpeed, Never>(.milesPerHour)
     private let distanceUnitsSubject = CurrentValueSubject<UnitLength, Never>(.miles)
+    private let autoPauseThresholdSubject = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
 
     // Public read-only publishers
     public var speedUnits: AnyPublisher<UnitSpeed, Never> { speedUnitsSubject.eraseToAnyPublisher() }
     public var distanceUnits: AnyPublisher<UnitLength, Never> { distanceUnitsSubject.eraseToAnyPublisher() }
+    public var autoPauseThreshold: AnyPublisher<Measurement<UnitSpeed>, Never> { autoPauseThresholdSubject.eraseToAnyPublisher() }
 
     public init() {}
 
@@ -26,6 +28,10 @@ public class Settings {
 
     public func setDistanceUnits(_ units: UnitLength) {
         distanceUnitsSubject.send(units)
+    }
+
+    public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
+        autoPauseThresholdSubject.send(threshold)
     }
 
     // Convenience helpers for common unit systems

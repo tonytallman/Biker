@@ -13,7 +13,7 @@ import Testing
 
 // MARK: - Tests
 
-@Suite("Accumulated PublisherExtension Tests")
+@Suite("Accumulating PublisherExtension Tests")
 struct AccumulatedPublisherExtensionTests {
     
     @Test("Accumulates duration measurements", arguments: [
@@ -36,12 +36,12 @@ struct AccumulatedPublisherExtensionTests {
         try await verifyAccumulation(input: input, expected: expected)
     }
     
-    @Test("Accumulated can be chained with inUnits")
-    func testAccumulatedWithInUnits() async throws {
+    @Test("Accumulating can be chained with inUnits")
+    func testAccumulatingWithInUnits() async throws {
         let deltas = CurrentValueSubject<Measurement<UnitLength>, Never>(1.kilometers)
         let units = CurrentValueSubject<UnitLength, Never>(.miles)
         
-        let accumulatedInMiles = deltas.accumulated().inUnits(units)
+        let accumulatedInMiles = deltas.accumulating().inUnits(units)
         var iterator = accumulatedInMiles.values.makeAsyncIterator()
         
         let first = try #require(await iterator.next())
@@ -56,6 +56,73 @@ struct AccumulatedPublisherExtensionTests {
         #expect(abs(second.value - 1.242742) <= 0.01)
     }
     
+    @Test("Accumulating pauses when activity state is paused")
+    func testAccumulatingPausesWhenPaused() async throws {
+        let deltas = PassthroughSubject<Measurement<UnitLength>, Never>()
+        let activityState = CurrentValueSubject<ActivityState, Never>(.active)
+        
+        let accumulated = deltas.accumulating(whileActive: activityState.eraseToAnyPublisher())
+        var iterator = accumulated.values.makeAsyncIterator()
+        
+        // Send first delta while active - should accumulate
+        let task1 = Task { await iterator.next() }
+        deltas.send(1.meters)
+        let first = try #require(await task1.value)
+        #expect(first.value == 1.0)
+        
+        // Pause activity
+        activityState.send(.paused)
+        
+        // Send delta while paused - should NOT accumulate
+        let task2 = Task { await iterator.next() }
+        deltas.send(2.meters)
+        let second = try #require(await task2.value)
+        // Should still be 1.0 (not 3.0)
+        #expect(second.value == 1.0)
+        
+        // Resume activity
+        activityState.send(.active)
+        
+        // Send delta while active again - should accumulate
+        let task3 = Task { await iterator.next() }
+        deltas.send(3.meters)
+        let third = try #require(await task3.value)
+        // Should be 4.0 (1 + 3, skipping the 2 that was sent while paused)
+        #expect(third.value == 4.0)
+    }
+    
+    @Test("Accumulating does not double-count on state changes")
+    func testAccumulatingNoDoubleCount() async throws {
+        let deltas = PassthroughSubject<Measurement<UnitLength>, Never>()
+        let activityState = CurrentValueSubject<ActivityState, Never>(.active)
+        
+        let accumulated = deltas.accumulating(whileActive: activityState.eraseToAnyPublisher())
+        var iterator = accumulated.values.makeAsyncIterator()
+        
+        // Send delta while active
+        let task1 = Task { await iterator.next() }
+        deltas.send(1.meters)
+        let first = try #require(await task1.value)
+        #expect(first.value == 1.0)
+        
+        // Change state to paused (should not cause accumulation)
+        activityState.send(.paused)
+        // Wait a bit to ensure no extra emissions
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        
+        // Change state back to active (should not cause accumulation of old value)
+        activityState.send(.active)
+        // Wait a bit to ensure no extra emissions
+        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+        
+        // Send new delta - should accumulate correctly
+        let task2 = Task { await iterator.next() }
+        deltas.send(2.meters)
+        let second = try #require(await task2.value)
+        // Should be 3.0 (1 + 2), not 4.0 or higher
+        #expect(second.value == 3.0)
+    }
+    
     // MARK: - Helper
     
     private func verifyAccumulation<UnitType: Dimension>(
@@ -63,7 +130,7 @@ struct AccumulatedPublisherExtensionTests {
         expected: Measurement<UnitType>
     ) async throws {
         let deltas = PassthroughSubject<Measurement<UnitType>, Never>()
-        let accumulated = deltas.accumulated()
+        let accumulated = deltas.accumulating()
         var iterator = accumulated.values.makeAsyncIterator()
         
         var lastValue: Measurement<UnitType>?

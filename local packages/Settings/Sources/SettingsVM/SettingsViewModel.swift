@@ -19,8 +19,10 @@ open class SettingsViewModel {
     public protocol Settings {
         var speedUnits: AnyPublisher<UnitSpeed, Never> { get }
         var distanceUnits: AnyPublisher<UnitLength, Never> { get }
+        var autoPauseThreshold: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
         func setSpeedUnits(_ units: UnitSpeed)
         func setDistanceUnits(_ units: UnitLength)
+        func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>)
     }
     
     private let preferences: Settings
@@ -28,6 +30,7 @@ open class SettingsViewModel {
     
     public var currentSpeedUnits: UnitSpeed = .milesPerHour
     public var currentDistanceUnits: UnitLength = .miles
+    public var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
     
     public let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     public let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
@@ -49,6 +52,13 @@ open class SettingsViewModel {
                 self.currentDistanceUnits = units
             }
             .store(in: &cancellables)
+        
+        preferences.autoPauseThreshold
+            .sink { [weak self] threshold in
+                guard let self else { return }
+                self.currentAutoPauseThreshold = threshold
+            }
+            .store(in: &cancellables)
     }
     
     public func setSpeedUnits(_ units: UnitSpeed) {
@@ -57,6 +67,10 @@ open class SettingsViewModel {
     
     public func setDistanceUnits(_ units: UnitLength) {
         preferences.setDistanceUnits(units)
+    }
+    
+    public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
+        preferences.setAutoPauseThreshold(threshold)
     }
 }
 

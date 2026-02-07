@@ -34,7 +34,7 @@ struct TimeServiceTests {
         let service = TimeService(period: period, scheduler: scheduler.eraseToAnyScheduler())
         
         var lastValue: Measurement<UnitDuration>?
-        let cancellable = service.time.sink { lastValue = $0 }
+        let cancellable = service.timePulse.accumulating().sink { lastValue = $0 }
         
         let elapsedNanoseconds = Int(elapsed.converted(to: .nanoseconds).value)
         scheduler.advance(by: .nanoseconds(elapsedNanoseconds))

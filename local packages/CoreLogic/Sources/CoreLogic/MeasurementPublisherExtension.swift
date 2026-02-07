@@ -21,11 +21,45 @@ extension Publisher where Failure == Never {
     
     /// Accumulates measurement values into a running total.
     /// The output uses the base unit for the dimension (e.g., meters for UnitLength).
-    /// Use `.inUnits()` after `.accumulated()` to convert to desired display units.
+    /// Use `.inUnits()` after `.accumulating()` to convert to desired display units.
     /// - Returns: A publisher that emits the accumulated sum after each input.
-    public func accumulated<UnitType: Dimension>() -> AnyPublisher<Measurement<UnitType>, Never> where Output == Measurement<UnitType> {
+    public func accumulating<UnitType: Dimension>() -> AnyPublisher<Measurement<UnitType>, Never> where Output == Measurement<UnitType> {
         let zero = Measurement<UnitType>(value: 0, unit: UnitType.baseUnit())
         return self.scan(zero, +)
+            .eraseToAnyPublisher()
+    }
+    
+    /// Accumulates measurement values into a running total, but only while activity state is `.active`.
+    /// When activity state is `.paused`, accumulation stops and the last accumulated value is maintained.
+    /// The output uses the base unit for the dimension (e.g., meters for UnitLength).
+    /// Use `.inUnits()` after `.accumulating(whileActive:)` to convert to desired display units.
+    /// - Parameter activityState: A publisher that emits the current activity state.
+    /// - Returns: A publisher that emits the accumulated sum after each input, but only while active.
+    public func accumulating<UnitType: Dimension>(
+        whileActive activityState: some Publisher<ActivityState, Never>
+    ) -> AnyPublisher<Measurement<UnitType>, Never>
+    where Output == Measurement<UnitType> {
+        let zero = Measurement<UnitType>(value: 0, unit: UnitType.baseUnit())
+
+        // Tag each measurement with an incrementing sequence number
+        let tagged = self.scan((seq: 0, value: zero)) { state, measurement in
+            (seq: state.seq + 1, value: measurement)
+        }
+
+        return Publishers.CombineLatest(tagged, activityState)
+            .scan((accumulated: zero, lastSeq: 0)) { state, input in
+                let ((seq, measurement), activity) = input
+                guard activity == .active, seq != state.lastSeq else {
+                    return (accumulated: state.accumulated, lastSeq: seq)
+                }
+                let newValue = Measurement<UnitType>(
+                    value: state.accumulated.value
+                         + measurement.converted(to: UnitType.baseUnit()).value,
+                    unit: UnitType.baseUnit()
+                )
+                return (accumulated: newValue, lastSeq: seq)
+            }
+            .map(\.accumulated)
             .eraseToAnyPublisher()
     }
 }

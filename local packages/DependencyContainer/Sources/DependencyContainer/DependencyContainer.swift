@@ -27,41 +27,67 @@ final public class DependencyContainer {
     private let speedPublisher: AnyPublisher<Measurement<UnitSpeed>, Never>
     private let cadencePublisher: AnyPublisher<Measurement<UnitFrequency>, Never>
     private let distancePublisher: AnyPublisher<Measurement<UnitLength>, Never>
+    private let timePublisher: AnyPublisher<Measurement<UnitDuration>, Never>
     
     // Retain SpeedAndDistanceService to keep location manager running (needed as CLLocationManagerDelegate)
     private let speedAndDistanceService: SpeedAndDistanceService
     
     // Retain TimeService to keep timer running
     private let timeService: TimeService
+    
+    // Retain AutoPauseService to keep subscriptions active
+    private let autoPauseService: AutoPauseService
 
     public init() {
         speedAndDistanceService = SpeedAndDistanceService()
-        #if DEBUG
-        speedPublisher = FakeSpeedProvider.makeSpeed()
-            .inUnits(preferences.speedUnits.eraseToAnyPublisher())
-        cadencePublisher = FakeCadenceProvider.makeCadence()
-            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
-        distancePublisher = FakeDistanceDeltaProvider.makeDistanceDelta()
-            .accumulated()
-            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
-        #else
-        speedPublisher = speedAndDistanceService.speed
-            .inUnits(preferences.speedUnits.eraseToAnyPublisher())
-        cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
-            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
-        distancePublisher = speedAndDistanceService.distanceDelta
-            .accumulated()
-            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
-        #endif
         
         // Create TimeService with 1 second period
         timeService = TimeService(period: Measurement(value: 1.0, unit: .seconds))
+        
+        #if DEBUG
+        // Raw speed (before unit conversion)
+        let rawSpeed = FakeSpeedProvider.makeSpeed()
+        
+        // Auto-pause service
+        autoPauseService = AutoPauseService(
+            speed: rawSpeed,
+            threshold: preferences.autoPauseThreshold
+        )
+        
+        // Display-converted speed
+        speedPublisher = rawSpeed.inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        cadencePublisher = FakeCadenceProvider.makeCadence()
+            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
+        distancePublisher = FakeDistanceDeltaProvider.makeDistanceDelta()
+            .accumulating(whileActive: autoPauseService.activityState)
+            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
+        #else
+        // Raw speed (before unit conversion)
+        let rawSpeed = speedAndDistanceService.speed
+        
+        // Auto-pause service
+        autoPauseService = AutoPauseService(
+            speed: rawSpeed,
+            threshold: preferences.autoPauseThreshold
+        )
+        
+        // Display-converted speed
+        speedPublisher = rawSpeed.inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
+            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
+        distancePublisher = speedAndDistanceService.distanceDelta
+            .accumulating(whileActive: autoPauseService.activityState)
+            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
+        #endif
+        
+        // Time with auto-pause
+        timePublisher = timeService.timePulse.accumulating(whileActive: autoPauseService.activityState)
         
         metricsProvider = MetricsProvider(speed: speedPublisher, cadence: cadencePublisher)
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
-        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher, time: timeService.time, distance: distancePublisher)
+        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher, time: timePublisher, distance: distancePublisher)
     }
     
     private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {

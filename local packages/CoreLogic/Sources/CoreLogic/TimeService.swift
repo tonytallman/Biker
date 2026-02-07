@@ -9,13 +9,10 @@ import Combine
 import CombineSchedulers
 import Foundation
 
-/// Service that provides time pulse and accumulated time publishers.
+/// Service that provides time pulse publisher.
 public final class TimeService {
     /// The raw pulse publisher that emits time deltas
     public let timePulse: AnyPublisher<Measurement<UnitDuration>, Never>
-    
-    /// Accumulated time from the pulse publisher
-    public let time: AnyPublisher<Measurement<UnitDuration>, Never>
     
     /// Public initializer using the main scheduler
     /// - Parameter period: The time interval between pulses
@@ -40,7 +37,5 @@ public final class TimeService {
             .map { _ in period }
             .share()
             .eraseToAnyPublisher()
-        
-        self.time = self.timePulse.accumulated()
     }
 }
