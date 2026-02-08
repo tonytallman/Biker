@@ -19,7 +19,7 @@ import SettingsVM
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``MainViewModel``, from which all other objects are indirectly accessed.
 @MainActor
 final public class DependencyContainer {
-    private let preferences = Settings()
+    private let settings = Settings()
     private let logger = ConsoleLogger()
     private let metricsProvider: MetricsProvider
     
@@ -54,16 +54,16 @@ final public class DependencyContainer {
         // Auto-pause service
         autoPauseService = AutoPauseService(
             speed: rawSpeed,
-            threshold: preferences.autoPauseThreshold
+            threshold: settings.autoPauseThreshold
         )
         
         // Display-converted speed
-        speedPublisher = rawSpeed.inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        speedPublisher = rawSpeed.inUnits(settings.speedUnits.eraseToAnyPublisher())
         cadencePublisher = fake.cadence
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         distancePublisher = fake.distanceDelta
             .accumulating(whileActive: autoPauseService.activityState)
-            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
+            .inUnits(settings.distanceUnits.eraseToAnyPublisher())
         #else
         // Raw speed (before unit conversion)
         let rawSpeed = speedAndDistanceService.speed
@@ -71,16 +71,16 @@ final public class DependencyContainer {
         // Auto-pause service
         autoPauseService = AutoPauseService(
             speed: rawSpeed,
-            threshold: preferences.autoPauseThreshold
+            threshold: settings.autoPauseThreshold
         )
         
         // Display-converted speed
-        speedPublisher = rawSpeed.inUnits(preferences.speedUnits.eraseToAnyPublisher())
+        speedPublisher = rawSpeed.inUnits(settings.speedUnits.eraseToAnyPublisher())
         cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         distancePublisher = speedAndDistanceService.distanceDelta
             .accumulating(whileActive: autoPauseService.activityState)
-            .inUnits(preferences.distanceUnits.eraseToAnyPublisher())
+            .inUnits(settings.distanceUnits.eraseToAnyPublisher())
         #endif
         
         // Time with auto-pause
@@ -94,7 +94,7 @@ final public class DependencyContainer {
     }
     
     private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
-        SettingsVM.SettingsViewModel(preferences: preferences)
+        SettingsVM.SettingsViewModel(settings: settings)
     }
     
     public func getMainViewModel() -> MainViewModel {

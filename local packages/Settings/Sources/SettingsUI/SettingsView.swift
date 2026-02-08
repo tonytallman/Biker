@@ -73,6 +73,15 @@ public struct SettingsView: View {
                         )
                     }
                 }
+                
+                Section(header: Text("System")) {
+                    Toggle(isOn: Binding(
+                        get: { viewModel.currentKeepScreenOn },
+                        set: { viewModel.setKeepScreenOn($0) }
+                    )) {
+                        Text("Keep screen on")
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -89,7 +98,7 @@ public struct SettingsView: View {
 #Preview {
     SettingsView(
         viewModel: SettingsViewModel(
-            preferences: SettingsModel.Settings()
+            settings: SettingsModel.Settings()
         )
     )
 }

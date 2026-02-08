@@ -13,11 +13,13 @@ public class Settings {
     private let speedUnitsSubject = CurrentValueSubject<UnitSpeed, Never>(.milesPerHour)
     private let distanceUnitsSubject = CurrentValueSubject<UnitLength, Never>(.miles)
     private let autoPauseThresholdSubject = CurrentValueSubject<Measurement<UnitSpeed>, Never>(.init(value: 3, unit: .milesPerHour))
+    private let keepScreenOnSubject = CurrentValueSubject<Bool, Never>(true)
 
     // Public read-only publishers
     public var speedUnits: AnyPublisher<UnitSpeed, Never> { speedUnitsSubject.eraseToAnyPublisher() }
     public var distanceUnits: AnyPublisher<UnitLength, Never> { distanceUnitsSubject.eraseToAnyPublisher() }
     public var autoPauseThreshold: AnyPublisher<Measurement<UnitSpeed>, Never> { autoPauseThresholdSubject.eraseToAnyPublisher() }
+    public var keepScreenOn: AnyPublisher<Bool, Never> { keepScreenOnSubject.eraseToAnyPublisher() }
 
     public init() {}
 
@@ -32,6 +34,10 @@ public class Settings {
 
     public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
         autoPauseThresholdSubject.send(threshold)
+    }
+
+    public func setKeepScreenOn(_ keepOn: Bool) {
+        keepScreenOnSubject.send(keepOn)
     }
 
     // Convenience helpers for common unit systems
