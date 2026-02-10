@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
-		EA16D36A2E32AF6A00A2FFB6 /* CoreLogic in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D3692E32AF6A00A2FFB6 /* CoreLogic */; };
 		EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */; };
 		EA6B24C22EECB22F00CF5714 /* SettingsModel in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C12EECB22F00CF5714 /* SettingsModel */; };
 		EA6B24C42EECB22F00CF5714 /* SettingsUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C32EECB22F00CF5714 /* SettingsUI */; };
@@ -550,7 +549,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 76MMS93BSG;
+				DEVELOPMENT_TEAM = 974LGL82GY;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;
@@ -569,7 +568,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 76MMS93BSG;
+				DEVELOPMENT_TEAM = 974LGL82GY;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
 				MARKETING_VERSION = 1.0;

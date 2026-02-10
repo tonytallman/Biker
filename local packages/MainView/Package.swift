@@ -23,7 +23,6 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../DesignSystem"),
         .package(path: "../Dashboard"),
         .package(path: "../Settings"),
     ],
