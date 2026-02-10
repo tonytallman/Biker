@@ -56,7 +56,7 @@ final public class SpeedAndDistanceService: NSObject {
 
     public func requestAuthorization() {
         if isAuthorized == .notRequested {
-            locationManager.requestWhenInUseAuthorization()
+            locationManager.requestAlwaysAuthorization()
         }
     }
 
@@ -68,6 +68,11 @@ final public class SpeedAndDistanceService: NSObject {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.activityType = .fitness
+        locationManager.pausesLocationUpdatesAutomatically = false
+        locationManager.allowsBackgroundLocationUpdates = true
+        #if os(iOS)
+        locationManager.showsBackgroundLocationIndicator = true
+        #endif
         locationManager.startUpdatingLocation()
     }
 }
@@ -98,6 +103,8 @@ extension SpeedAndDistanceService: CLLocationManagerDelegate {
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
             logger?.info("Location permissions authorized.")
+            locationManager.allowsBackgroundLocationUpdates = true
+            locationManager.pausesLocationUpdatesAutomatically = false
             locationManager.startUpdatingLocation()
         case .denied, .restricted:
             logger?.info("Location permissions denied or restricted.")

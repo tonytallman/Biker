@@ -5,9 +5,10 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import XCTest
+import Testing
 @testable import SettingsModel
 
-final class SettingsModelTests: XCTestCase {
+@Suite("SettingsModel Tests")
+struct SettingsModelTests {
     // SettingsModelTests placeholder
 }

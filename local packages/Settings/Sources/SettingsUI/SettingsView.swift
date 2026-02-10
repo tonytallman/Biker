@@ -10,6 +10,7 @@ import Foundation
 
 import DesignSystem
 import SettingsModel
+import SettingsStrings
 import SettingsVM
 
 public struct SettingsView: View {
@@ -27,13 +28,13 @@ public struct SettingsView: View {
     
     public var body: some View {
         VStack(spacing: 0) {
-            Text("Settings")
+            Text("Settings", bundle: .settingsStrings, comment: "Settings screen title")
                 .font(.largeTitle)
                 .padding()
             
             Form {
-                Section(header: Text("Units")) {
-                    Picker("Speed", selection: Binding(
+                Section(header: Text("Units", bundle: .settingsStrings, comment: "Section header for speed and distance unit pickers")) {
+                    Picker(String(localized: "Speed", bundle: .settingsStrings, comment: "Picker label for speed unit (e.g. mph, km/h)"), selection: Binding(
                         get: { viewModel.currentSpeedUnits },
                         set: { viewModel.setSpeedUnits($0) }
                     )) {
@@ -42,7 +43,7 @@ public struct SettingsView: View {
                         }
                     }
                     
-                    Picker("Distance", selection: Binding(
+                    Picker(String(localized: "Distance", bundle: .settingsStrings, comment: "Picker label for distance unit (e.g. miles, km)"), selection: Binding(
                         get: { viewModel.currentDistanceUnits },
                         set: { viewModel.setDistanceUnits($0) }
                     )) {
@@ -52,10 +53,10 @@ public struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("Auto-Pause")) {
+                Section(header: Text("Auto-Pause", bundle: .settingsStrings, comment: "Section header for auto-pause ride detection settings")) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Speed Threshold")
+                            Text("Speed Threshold", bundle: .settingsStrings, comment: "Label for speed below which the app auto-pauses the ride")
                             Spacer()
                             Text(String(format: "%.1f %@", viewModel.currentAutoPauseThreshold.converted(to: viewModel.currentSpeedUnits).value, viewModel.currentSpeedUnits.symbol))
                                 .foregroundColor(.secondary)
@@ -74,18 +75,47 @@ public struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("System")) {
+                Section(header: Text("System", bundle: .settingsStrings, comment: "Section header for system toggles and permissions")) {
                     Toggle(isOn: Binding(
                         get: { viewModel.currentKeepScreenOn },
                         set: { viewModel.setKeepScreenOn($0) }
                     )) {
-                        Text("Keep screen on")
+                        Text("Keep screen on", bundle: .settingsStrings, comment: "Toggle to prevent screen from sleeping during a ride")
+                    }
+                    
+                    HStack {
+                        Text("Location in Background", bundle: .settingsStrings, comment: "Row label for location permission status when app is in background")
+                        Spacer()
+                        Text(viewModel.locationBackgroundStatusText)
+                            .foregroundColor(.secondary)
+                        Button {
+                            viewModel.openLocationPermissions()
+                        } label: {
+                            Image(systemName: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    
+                    HStack {
+                        Text("Bluetooth in Background", bundle: .settingsStrings, comment: "Row label for Bluetooth permission status when app is in background")
+                        Spacer()
+                        Text(viewModel.bluetoothBackgroundStatusText)
+                            .foregroundColor(.secondary)
+                        Button {
+                            viewModel.openBluetoothPermissions()
+                        } label: {
+                            Image(systemName: "arrow.up.forward.app")
+                        }
+                        .buttonStyle(.borderless)
                     }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bikerBackground.ignoresSafeArea())
+        .onAppear {
+            viewModel.refreshBackgroundStatuses()
+        }
     }
     
     private static func unitDisplayName(_ unit: Dimension) -> String {

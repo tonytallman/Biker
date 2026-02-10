@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "Settings",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v12),
         .iOS(.v17),
@@ -25,6 +26,10 @@ let package = Package(
             name: "SettingsModel",
             targets: ["SettingsModel"]
         ),
+        .library(
+            name: "SettingsStrings",
+            targets: ["SettingsStrings"]
+        ),
     ],
     dependencies: [
         .package(path: "../DesignSystem"),
@@ -33,8 +38,13 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
+            name: "SettingsStrings",
+            dependencies: [],
+            resources: [.process("Localizable.xcstrings")]
+        ),
+        .target(
             name: "SettingsModel",
-            dependencies: []
+            dependencies: ["SettingsStrings"]
         ),
         .target(
             name: "SettingsVM",
@@ -42,7 +52,7 @@ let package = Package(
         ),
         .target(
             name: "SettingsUI",
-            dependencies: ["SettingsVM", "SettingsModel", "DesignSystem"]
+            dependencies: ["SettingsVM", "SettingsModel", "DesignSystem", "SettingsStrings"]
         ),
         .testTarget(
             name: "SettingsModelTests",

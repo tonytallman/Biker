@@ -6,6 +6,8 @@
 //
 
 import Combine
+import CoreBluetooth
+import CoreLocation
 import Foundation
 import Observation
 
@@ -27,30 +29,42 @@ open class SettingsViewModel {
         func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>)
         func setKeepScreenOn(_ keepOn: Bool)
     }
-
-    package protocol ScreenController {
-        @MainActor func setIdleTimerDisabled(_ disabled: Bool)
-    }
     
     private let settings: Settings
     private let screenController: ScreenController
+    private let locationPermissionsSettings: LocationPermissionsSettings
+    private let bluetoothPermissionsSettings: BluetoothPermissionsSettings
     private var cancellables: Set<AnyCancellable> = []
     
     public var currentSpeedUnits: UnitSpeed = .milesPerHour
     public var currentDistanceUnits: UnitLength = .miles
     public var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
     public var currentKeepScreenOn: Bool = true
+    public var locationBackgroundStatusText: String = ""
+    public var bluetoothBackgroundStatusText: String = ""
     
     public let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     public let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
     
     public convenience init(settings: Settings) {
-        self.init(settings: settings, screenController: DefaultScreenController())
+        self.init(
+            settings: settings,
+            screenController: DefaultScreenController(),
+            locationPermissionsSettings: DefaultLocationPermissionsSettings(),
+            bluetoothPermissionsSettings: DefaultBluetoothPermissionsSettings()
+        )
     }
     
-    package init(settings: Settings, screenController: ScreenController) {
+    package init(
+        settings: Settings,
+        screenController: ScreenController,
+        locationPermissionsSettings: LocationPermissionsSettings,
+        bluetoothPermissionsSettings: BluetoothPermissionsSettings
+    ) {
         self.settings = settings
         self.screenController = screenController
+        self.locationPermissionsSettings = locationPermissionsSettings
+        self.bluetoothPermissionsSettings = bluetoothPermissionsSettings
         
         // Subscribe to settings changes
         settings.speedUnits
@@ -81,6 +95,17 @@ open class SettingsViewModel {
                 self.screenController.setIdleTimerDisabled(keepOn)
             }
             .store(in: &cancellables)
+        
+        // Subscribe to foreground notification to refresh statuses when returning from Settings
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.refreshBackgroundStatuses()
+            }
+            .store(in: &cancellables)
+        
+        // Initial refresh of background statuses
+        refreshBackgroundStatuses()
     }
     
     public func setSpeedUnits(_ units: UnitSpeed) {
@@ -99,10 +124,17 @@ open class SettingsViewModel {
         settings.setKeepScreenOn(keepOn)
     }
     
-    private struct DefaultScreenController: ScreenController {
-        @MainActor func setIdleTimerDisabled(_ disabled: Bool) {
-            UIApplication.shared.isIdleTimerDisabled = disabled
-        }
+    public func openBluetoothPermissions() {
+        bluetoothPermissionsSettings.openPermissions()
+    }
+    
+    public func openLocationPermissions() {
+        locationPermissionsSettings.openPermissions()
+    }
+    
+    public func refreshBackgroundStatuses() {
+        locationBackgroundStatusText = locationPermissionsSettings.locationBackgroundStatus
+        bluetoothBackgroundStatusText = bluetoothPermissionsSettings.bluetoothBackgroundStatus
     }
 }
 
@@ -110,4 +142,3 @@ open class SettingsViewModel {
 public final class ProductionSettingsViewModel: SettingsViewModel {}
 
 extension SettingsModel.Settings: SettingsViewModel.Settings {}
-

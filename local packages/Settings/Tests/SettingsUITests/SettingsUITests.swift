@@ -5,11 +5,12 @@
 //  Created by Tony Tallman on 1/20/25.
 //
 
-import XCTest
+import Testing
 
-@testable import SettingsUI
-@testable import SettingsVM
+import SettingsUI
+import SettingsVM
 
-final class SettingsUITests: XCTestCase {
+@Suite("SettingsUI Tests")
+struct SettingsUITests {
     // SettingsUITests placeholder
 }
