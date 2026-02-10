@@ -38,7 +38,7 @@ let package = Package(
                 .product(name: "SettingsModel", package: "Settings"),
                 .product(name: "DashboardVM", package: "Dashboard"),
                 .product(name: "DashboardModel", package: "Dashboard")
-            ]
+            ],
         ),
         .testTarget(
             name: "DependencyContainerTests",

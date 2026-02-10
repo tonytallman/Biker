@@ -58,12 +58,13 @@ final public class DependencyContainer {
         )
         
         // Display-converted speed
-        speedPublisher = rawSpeed.inUnits(settings.speedUnits.eraseToAnyPublisher())
+        speedPublisher = rawSpeed
+            .inUnits(settings.speedUnits)
         cadencePublisher = fake.cadence
-            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
+            .inUnits(Just(.revolutionsPerMinute))
         distancePublisher = fake.distanceDelta
             .accumulating(whileActive: autoPauseService.activityState)
-            .inUnits(settings.distanceUnits.eraseToAnyPublisher())
+            .inUnits(settings.distanceUnits)
         #else
         // Raw speed (before unit conversion)
         let rawSpeed = speedAndDistanceService.speed
@@ -75,12 +76,13 @@ final public class DependencyContainer {
         )
         
         // Display-converted speed
-        speedPublisher = rawSpeed.inUnits(settings.speedUnits.eraseToAnyPublisher())
+        speedPublisher = rawSpeed
+            .inUnits(settings.speedUnits)
         cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
         distancePublisher = speedAndDistanceService.distanceDelta
             .accumulating(whileActive: autoPauseService.activityState)
-            .inUnits(settings.distanceUnits.eraseToAnyPublisher())
+            .inUnits(settings.distanceUnits)
         #endif
         
         // Time with auto-pause
