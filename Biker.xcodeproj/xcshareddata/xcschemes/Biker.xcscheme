@@ -54,6 +54,162 @@
                ReferencedContainer = "container:Biker.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CoreLogicTests"
+               BuildableName = "CoreLogicTests"
+               BlueprintName = "CoreLogicTests"
+               ReferencedContainer = "container:local packages/CoreLogic">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CyclingSpeedAndCadenceServiceTests"
+               BuildableName = "CyclingSpeedAndCadenceServiceTests"
+               BlueprintName = "CyclingSpeedAndCadenceServiceTests"
+               ReferencedContainer = "container:local packages/CyclingSpeedAndCadenceService">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DashboardModelTests"
+               BuildableName = "DashboardModelTests"
+               BlueprintName = "DashboardModelTests"
+               ReferencedContainer = "container:local packages/Dashboard">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DashboardVMTests"
+               BuildableName = "DashboardVMTests"
+               BlueprintName = "DashboardVMTests"
+               ReferencedContainer = "container:local packages/Dashboard">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DashboardUITests"
+               BuildableName = "DashboardUITests"
+               BlueprintName = "DashboardUITests"
+               ReferencedContainer = "container:local packages/Dashboard">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DependencyContainerTests"
+               BuildableName = "DependencyContainerTests"
+               BlueprintName = "DependencyContainerTests"
+               ReferencedContainer = "container:local packages/DependencyContainer">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DesignSystemTests"
+               BuildableName = "DesignSystemTests"
+               BlueprintName = "DesignSystemTests"
+               ReferencedContainer = "container:local packages/DesignSystem">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "MainVMTests"
+               BuildableName = "MainVMTests"
+               BlueprintName = "MainVMTests"
+               ReferencedContainer = "container:local packages/MainView">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "MainUITests"
+               BuildableName = "MainUITests"
+               BlueprintName = "MainUITests"
+               ReferencedContainer = "container:local packages/MainView">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "MetricsFromCoreLocationTests"
+               BuildableName = "MetricsFromCoreLocationTests"
+               BlueprintName = "MetricsFromCoreLocationTests"
+               ReferencedContainer = "container:local packages/MetricsFromCoreLocation">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "SettingsModelTests"
+               BuildableName = "SettingsModelTests"
+               BlueprintName = "SettingsModelTests"
+               ReferencedContainer = "container:local packages/Settings">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "SettingsVMTests"
+               BuildableName = "SettingsVMTests"
+               BlueprintName = "SettingsVMTests"
+               ReferencedContainer = "container:local packages/Settings">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "SettingsUITests"
+               BuildableName = "SettingsUITests"
+               BlueprintName = "SettingsUITests"
+               ReferencedContainer = "container:local packages/Settings">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
