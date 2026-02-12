@@ -1,8 +1,8 @@
 //
 //  MockLocationPermissionsSettings.swift
-//  Settings
+//  SettingsModelTests
 //
-//  Created by Tony Tallman on 2/9/26.
+//  Created by Tony Tallman on 2/11/26.
 //
 
 import SettingsModel

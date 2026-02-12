@@ -13,22 +13,34 @@ import SettingsModel
 @MainActor
 @Suite("SettingsViewModel Tests")
 struct SettingsViewModelTests {
-    let settings: SettingsModel.Settings
+    let metricsSettings: SettingsModel.Settings
+    let systemSettings: SettingsModel.SystemSettings
     let mockScreenController: MockScreenController
     let mockLocationPermissions: MockLocationPermissionsSettings
     let mockBluetoothPermissions: MockBluetoothPermissionsSettings
+    let mockSystemSettingsNavigator: MockSystemSettingsNavigator
+    let mockForegroundNotifier: MockForegroundNotifier
     let viewModel: SettingsVM.SettingsViewModel
     
     init() {
-        settings = SettingsModel.Settings()
+        metricsSettings = SettingsModel.Settings()
+
         mockScreenController = MockScreenController()
         mockLocationPermissions = MockLocationPermissionsSettings()
         mockBluetoothPermissions = MockBluetoothPermissionsSettings()
-        viewModel = SettingsVM.SettingsViewModel(
-            settings: settings,
-            screenController: mockScreenController,
+        mockSystemSettingsNavigator = MockSystemSettingsNavigator()
+        mockForegroundNotifier = MockForegroundNotifier()
+        systemSettings = SettingsModel.DefaultSystemSettings(
+            bluetoothPermissionsSettings: mockBluetoothPermissions,
             locationPermissionsSettings: mockLocationPermissions,
-            bluetoothPermissionsSettings: mockBluetoothPermissions
+            systemSettingsNavigator: mockSystemSettingsNavigator,
+            screenController: mockScreenController,
+            foregroundNotifier: mockForegroundNotifier,
+        )
+
+        viewModel = SettingsVM.SettingsViewModel(
+            metricsSettings: metricsSettings,
+            systemSettings: systemSettings,
         )
     }
     
@@ -38,7 +50,7 @@ struct SettingsViewModelTests {
         
         viewModel.setKeepScreenOn(false)
         
-        #expect(viewModel.currentKeepScreenOn == false)
+        #expect(viewModel.keepScreenOn == false)
         #expect(mockScreenController.callCount == 1)
         #expect(mockScreenController.lastDisabledValue == false)
     }
@@ -47,9 +59,9 @@ struct SettingsViewModelTests {
     func testExternalKeepScreenOnChangeUpdatesStateAndDisablesIdleTimer() {
         mockScreenController.reset()
         
-        settings.setKeepScreenOn(false)
+        systemSettings.setKeepScreenOn(false)
         
-        #expect(viewModel.currentKeepScreenOn == false)
+        #expect(viewModel.keepScreenOn == false)
         #expect(mockScreenController.callCount == 1)
         #expect(mockScreenController.lastDisabledValue == false)
     }
@@ -63,7 +75,7 @@ struct SettingsViewModelTests {
     
     @Test("External speed units change updates state")
     func testExternalSpeedUnitsChangeUpdatesState() {
-        settings.setSpeedUnits(.kilometersPerHour)
+        metricsSettings.setSpeedUnits(.kilometersPerHour)
         
         #expect(viewModel.currentSpeedUnits.symbol == UnitSpeed.kilometersPerHour.symbol)
     }
@@ -77,7 +89,7 @@ struct SettingsViewModelTests {
     
     @Test("External distance units change updates state")
     func testExternalDistanceUnitsChangeUpdatesState() {
-        settings.setDistanceUnits(.kilometers)
+        metricsSettings.setDistanceUnits(.kilometers)
         
         #expect(viewModel.currentDistanceUnits.symbol == UnitLength.kilometers.symbol)
     }
@@ -95,7 +107,7 @@ struct SettingsViewModelTests {
     @Test("External auto pause threshold change updates state")
     func testExternalAutoPauseThresholdChangeUpdatesState() {
         let kph = Measurement(value: 7.0, unit: UnitSpeed.kilometersPerHour)
-        settings.setAutoPauseThreshold(kph)
+        metricsSettings.setAutoPauseThreshold(kph)
         
         let current = viewModel.currentAutoPauseThreshold
         let convertedValue = current.converted(to: .kilometersPerHour).value
@@ -115,20 +127,19 @@ struct SettingsViewModelTests {
     
     @Test("Open location permissions delegates to location permissions settings")
     func testOpenLocationPermissionsDelegatesToLocationPermissionsSettings() {
-        mockLocationPermissions.reset()
+        mockSystemSettingsNavigator.reset()
         
         viewModel.openLocationPermissions()
         
-        #expect(mockLocationPermissions.openPermissionsCallCount == 1)
+        #expect(mockSystemSettingsNavigator.openPermissionsCallCount == 1)
     }
     
     @Test("Open bluetooth permissions delegates to bluetooth permissions settings")
     func testOpenBluetoothPermissionsDelegatesToBluetoothPermissionsSettings() {
-        mockBluetoothPermissions.reset()
+        mockSystemSettingsNavigator.reset()
         
         viewModel.openBluetoothPermissions()
         
-        #expect(mockBluetoothPermissions.openPermissionsCallCount == 1)
+        #expect(mockSystemSettingsNavigator.openPermissionsCallCount == 1)
     }
 }
-

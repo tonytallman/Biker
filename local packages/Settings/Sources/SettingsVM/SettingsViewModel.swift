@@ -12,92 +12,73 @@ import Foundation
 import Observation
 
 import SettingsModel
-import UIKit
 
 /// Base class for settings view models.
 @MainActor
 @Observable
 open class SettingsViewModel {
-    /// Protocol for settings that can be used by SettingsViewModel
-    public protocol Settings {
-        var speedUnits: AnyPublisher<UnitSpeed, Never> { get }
-        var distanceUnits: AnyPublisher<UnitLength, Never> { get }
-        var autoPauseThreshold: AnyPublisher<Measurement<UnitSpeed>, Never> { get }
-        var keepScreenOn: AnyPublisher<Bool, Never> { get }
-        func setSpeedUnits(_ units: UnitSpeed)
-        func setDistanceUnits(_ units: UnitLength)
-        func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>)
-        func setKeepScreenOn(_ keepOn: Bool)
-    }
-    
-    private let settings: Settings
-    private let screenController: ScreenController
-    private let locationPermissionsSettings: LocationPermissionsSettings
-    private let bluetoothPermissionsSettings: BluetoothPermissionsSettings
+
+    private let metricsSettings: MetricsSettings
+    private let systemSettings: SystemSettings
     private var cancellables: Set<AnyCancellable> = []
     
     public var currentSpeedUnits: UnitSpeed = .milesPerHour
     public var currentDistanceUnits: UnitLength = .miles
     public var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
-    public var currentKeepScreenOn: Bool = true
     public var locationBackgroundStatusText: String = ""
     public var bluetoothBackgroundStatusText: String = ""
     
     public let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     public let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
-    
-    public convenience init(settings: Settings) {
+
+    public var keepScreenOn: Bool = true
+
+    public convenience init(metricsSettings: MetricsSettings) {
         self.init(
-            settings: settings,
-            screenController: DefaultScreenController(),
-            locationPermissionsSettings: DefaultLocationPermissionsSettings(),
-            bluetoothPermissionsSettings: DefaultBluetoothPermissionsSettings()
+            metricsSettings: metricsSettings,
+            systemSettings: DefaultSystemSettings(),
         )
     }
     
     package init(
-        settings: Settings,
-        screenController: ScreenController,
-        locationPermissionsSettings: LocationPermissionsSettings,
-        bluetoothPermissionsSettings: BluetoothPermissionsSettings
+        metricsSettings: MetricsSettings,
+        systemSettings: SystemSettings,
     ) {
-        self.settings = settings
-        self.screenController = screenController
-        self.locationPermissionsSettings = locationPermissionsSettings
-        self.bluetoothPermissionsSettings = bluetoothPermissionsSettings
+        self.metricsSettings = metricsSettings
+        self.systemSettings = systemSettings
         
         // Subscribe to settings changes
-        settings.speedUnits
+        metricsSettings.speedUnits
             .sink { [weak self] units in
                 guard let self else { return }
                 self.currentSpeedUnits = units
             }
             .store(in: &cancellables)
         
-        settings.distanceUnits
+        metricsSettings.distanceUnits
             .sink { [weak self] units in
                 guard let self else { return }
                 self.currentDistanceUnits = units
             }
             .store(in: &cancellables)
         
-        settings.autoPauseThreshold
+        metricsSettings.autoPauseThreshold
             .sink { [weak self] threshold in
                 guard let self else { return }
                 self.currentAutoPauseThreshold = threshold
             }
             .store(in: &cancellables)
         
-        settings.keepScreenOn
+        systemSettings.keepScreenOn
             .sink { [weak self] keepOn in
                 guard let self else { return }
-                self.currentKeepScreenOn = keepOn
-                self.screenController.setIdleTimerDisabled(keepOn)
+                self.keepScreenOn = keepOn
+                self.systemSettings.setIdleTimerDisabled(keepOn)
             }
             .store(in: &cancellables)
         
         // Subscribe to foreground notification to refresh statuses when returning from Settings
-        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+        systemSettings.willEnterForeground
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.refreshBackgroundStatuses()
@@ -109,36 +90,33 @@ open class SettingsViewModel {
     }
     
     public func setSpeedUnits(_ units: UnitSpeed) {
-        settings.setSpeedUnits(units)
+        metricsSettings.setSpeedUnits(units)
     }
     
     public func setDistanceUnits(_ units: UnitLength) {
-        settings.setDistanceUnits(units)
+        metricsSettings.setDistanceUnits(units)
     }
     
     public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
-        settings.setAutoPauseThreshold(threshold)
+        metricsSettings.setAutoPauseThreshold(threshold)
     }
     
     public func setKeepScreenOn(_ keepOn: Bool) {
-        settings.setKeepScreenOn(keepOn)
+        systemSettings.setKeepScreenOn(keepOn)
     }
     
     public func openBluetoothPermissions() {
-        bluetoothPermissionsSettings.openPermissions()
+        systemSettings.openPermissions()
     }
     
     public func openLocationPermissions() {
-        locationPermissionsSettings.openPermissions()
+        systemSettings.openPermissions()
     }
     
     public func refreshBackgroundStatuses() {
-        locationBackgroundStatusText = locationPermissionsSettings.locationBackgroundStatus
-        bluetoothBackgroundStatusText = bluetoothPermissionsSettings.bluetoothBackgroundStatus
+        locationBackgroundStatusText = systemSettings.locationBackgroundStatus
+        bluetoothBackgroundStatusText = systemSettings.bluetoothBackgroundStatus
     }
 }
 
-/// Production implementation of SettingsViewModel
-public final class ProductionSettingsViewModel: SettingsViewModel {}
-
-extension SettingsModel.Settings: SettingsViewModel.Settings {}
+extension SettingsModel.Settings: MetricsSettings {}

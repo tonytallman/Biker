@@ -40,6 +40,11 @@ final public class SpeedAndDistanceService: NSObject {
     private let locationManager = CLLocationManager()
     private let logger: Logger?
 
+    /// Whether the host bundle declares background location capability.
+    private static var supportsBackgroundLocation: Bool {
+        (Bundle.main.infoDictionary?["UIBackgroundModes"] as? [String])?.contains("location") == true
+    }
+
     public init(logger: Logger? = nil) {
         self.logger = logger
         speed = speedSubject.eraseToAnyPublisher()
@@ -69,7 +74,9 @@ final public class SpeedAndDistanceService: NSObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.activityType = .fitness
         locationManager.pausesLocationUpdatesAutomatically = false
-        locationManager.allowsBackgroundLocationUpdates = true
+        if Self.supportsBackgroundLocation {
+            locationManager.allowsBackgroundLocationUpdates = true
+        }
         #if os(iOS)
         locationManager.showsBackgroundLocationIndicator = true
         #endif
@@ -103,7 +110,9 @@ extension SpeedAndDistanceService: CLLocationManagerDelegate {
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
             logger?.info("Location permissions authorized.")
-            locationManager.allowsBackgroundLocationUpdates = true
+            if Self.supportsBackgroundLocation {
+                locationManager.allowsBackgroundLocationUpdates = true
+            }
             locationManager.pausesLocationUpdatesAutomatically = false
             locationManager.startUpdatingLocation()
         case .denied, .restricted:

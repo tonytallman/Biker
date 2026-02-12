@@ -77,7 +77,7 @@ public struct SettingsView: View {
                 
                 Section(header: Text("System", bundle: .settingsStrings, comment: "Section header for system toggles and permissions")) {
                     Toggle(isOn: Binding(
-                        get: { viewModel.currentKeepScreenOn },
+                        get: { viewModel.keepScreenOn },
                         set: { viewModel.setKeepScreenOn($0) }
                     )) {
                         Text("Keep screen on", bundle: .settingsStrings, comment: "Toggle to prevent screen from sleeping during a ride")
@@ -128,7 +128,7 @@ public struct SettingsView: View {
 #Preview {
     SettingsView(
         viewModel: SettingsViewModel(
-            settings: SettingsModel.Settings()
+            metricsSettings: SettingsModel.Settings()
         )
     )
 }

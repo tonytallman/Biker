@@ -9,9 +9,8 @@ import CoreBluetooth
 import SettingsStrings
 import UIKit
 
-@MainActor package protocol BluetoothPermissionsSettings {
+package protocol BluetoothPermissionsSettings {
     var bluetoothBackgroundStatus: String { get }
-    func openPermissions()
 }
 
 package struct DefaultBluetoothPermissionsSettings: BluetoothPermissionsSettings {
@@ -30,12 +29,6 @@ package struct DefaultBluetoothPermissionsSettings: BluetoothPermissionsSettings
             return String(localized: "Not Determined", bundle: .settingsStrings, comment: "Bluetooth permission status: user has not been asked yet")
         @unknown default:
             return String(localized: "Unknown", bundle: .settingsStrings, comment: "Bluetooth permission status: unknown or future case")
-        }
-    }
-
-    package func openPermissions() {
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            UIApplication.shared.open(url)
         }
     }
 }

@@ -96,7 +96,7 @@ final public class DependencyContainer {
     }
     
     private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
-        SettingsVM.SettingsViewModel(settings: settings)
+        SettingsVM.SettingsViewModel(metricsSettings: settings)
     }
     
     public func getMainViewModel() -> MainViewModel {
