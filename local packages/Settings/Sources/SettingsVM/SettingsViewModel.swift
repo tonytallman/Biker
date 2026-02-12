@@ -90,19 +90,19 @@ open class SettingsViewModel {
     }
     
     public func setSpeedUnits(_ units: UnitSpeed) {
-        metricsSettings.setSpeedUnits(units)
+        metricsSettings.speedUnits.send(units)
     }
     
     public func setDistanceUnits(_ units: UnitLength) {
-        metricsSettings.setDistanceUnits(units)
+        metricsSettings.distanceUnits.send(units)
     }
     
     public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
-        metricsSettings.setAutoPauseThreshold(threshold)
+        metricsSettings.autoPauseThreshold.send(threshold)
     }
     
     public func setKeepScreenOn(_ keepOn: Bool) {
-        systemSettings.setKeepScreenOn(keepOn)
+        systemSettings.keepScreenOn.send(keepOn)
     }
     
     public func openBluetoothPermissions() {

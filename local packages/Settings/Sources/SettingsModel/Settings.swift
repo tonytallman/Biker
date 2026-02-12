@@ -16,10 +16,10 @@ public class Settings {
     private let keepScreenOnSubject = CurrentValueSubject<Bool, Never>(true)
 
     // Public read-only publishers
-    public var speedUnits: AnyPublisher<UnitSpeed, Never> { speedUnitsSubject.eraseToAnyPublisher() }
-    public var distanceUnits: AnyPublisher<UnitLength, Never> { distanceUnitsSubject.eraseToAnyPublisher() }
-    public var autoPauseThreshold: AnyPublisher<Measurement<UnitSpeed>, Never> { autoPauseThresholdSubject.eraseToAnyPublisher() }
-    public var keepScreenOn: AnyPublisher<Bool, Never> { keepScreenOnSubject.eraseToAnyPublisher() }
+    public var speedUnits: any Subject<UnitSpeed, Never> { speedUnitsSubject }
+    public var distanceUnits: any Subject<UnitLength, Never> { distanceUnitsSubject }
+    public var autoPauseThreshold: any Subject<Measurement<UnitSpeed>, Never> { autoPauseThresholdSubject }
+    public var keepScreenOn: any Subject<Bool, Never> { keepScreenOnSubject }
 
     public init() {}
 

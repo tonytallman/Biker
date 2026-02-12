@@ -9,8 +9,7 @@ import Combine
 
 @MainActor
 package protocol SystemSettings {
-    var keepScreenOn: AnyPublisher<Bool, Never> { get }
-    func setKeepScreenOn(_ keepScreenOn: Bool)
+    var keepScreenOn: any Subject<Bool, Never> { get }
     var willEnterForeground: AnyPublisher<Void, Never> { get }
     var locationBackgroundStatus: String { get }
     var bluetoothBackgroundStatus: String { get }
@@ -26,7 +25,7 @@ package final class DefaultSystemSettings: SystemSettings {
     private let screenController: ScreenController
     private let foregroundNotifier: ForegroundNotifier
 
-    private let keepScreenOnSubject = CurrentValueSubject<Bool, Never>(true)
+    package let keepScreenOn: any Subject<Bool, Never> = CurrentValueSubject<Bool, Never>(true)
 
     @MainActor package convenience init() {
         self.init(
@@ -50,14 +49,6 @@ package final class DefaultSystemSettings: SystemSettings {
         self.systemSettingsNavigator = systemSettingsNavigator
         self.screenController = screenController
         self.foregroundNotifier = foregroundNotifier
-    }
-
-    package var keepScreenOn: AnyPublisher<Bool, Never> {
-        keepScreenOnSubject.eraseToAnyPublisher()
-    }
-
-    package func setKeepScreenOn(_ keepScreenOn: Bool) {
-        keepScreenOnSubject.send(keepScreenOn)
     }
 
     package var willEnterForeground: AnyPublisher<Void, Never> {

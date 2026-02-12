@@ -178,7 +178,7 @@ struct DefaultSystemSettingsTests {
         let cancellable = systemSettings.keepScreenOn.sink { receivedValues.append($0) }
         defer { cancellable.cancel() }
 
-        systemSettings.setKeepScreenOn(false)
+        systemSettings.keepScreenOn.send(false)
 
         #expect(receivedValues == [true, false])
     }

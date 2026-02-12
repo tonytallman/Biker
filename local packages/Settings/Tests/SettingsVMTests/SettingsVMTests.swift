@@ -59,7 +59,7 @@ struct SettingsViewModelTests {
     func testExternalKeepScreenOnChangeUpdatesStateAndDisablesIdleTimer() {
         mockScreenController.reset()
         
-        systemSettings.setKeepScreenOn(false)
+        systemSettings.keepScreenOn.send(false)
         
         #expect(viewModel.keepScreenOn == false)
         #expect(mockScreenController.callCount == 1)
