@@ -22,25 +22,18 @@ open class SettingsViewModel {
     private let systemSettings: SystemSettings
     private var cancellables: Set<AnyCancellable> = []
     
-    public var currentSpeedUnits: UnitSpeed = .milesPerHour
-    public var currentDistanceUnits: UnitLength = .miles
-    public var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
-    public var locationBackgroundStatusText: String = ""
-    public var bluetoothBackgroundStatusText: String = ""
+    package var currentSpeedUnits: UnitSpeed = .milesPerHour
+    package var currentDistanceUnits: UnitLength = .miles
+    package var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
+    package var locationBackgroundStatusText: String = ""
+    package var bluetoothBackgroundStatusText: String = ""
     
-    public let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
-    public let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
+    package let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
+    package let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
 
-    public var keepScreenOn: Bool = true
-
-    public convenience init(metricsSettings: MetricsSettings, storage: SettingsStorage) {
-        self.init(
-            metricsSettings: metricsSettings,
-            systemSettings: DefaultSystemSettings(storage: storage),
-        )
-    }
+    package var keepScreenOn: Bool = true
     
-    package init(
+    public init(
         metricsSettings: MetricsSettings,
         systemSettings: SystemSettings,
     ) {
@@ -89,31 +82,31 @@ open class SettingsViewModel {
         refreshBackgroundStatuses()
     }
     
-    public func setSpeedUnits(_ units: UnitSpeed) {
+    package func setSpeedUnits(_ units: UnitSpeed) {
         metricsSettings.speedUnits.send(units)
     }
     
-    public func setDistanceUnits(_ units: UnitLength) {
+    package func setDistanceUnits(_ units: UnitLength) {
         metricsSettings.distanceUnits.send(units)
     }
     
-    public func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
+    package func setAutoPauseThreshold(_ threshold: Measurement<UnitSpeed>) {
         metricsSettings.autoPauseThreshold.send(threshold)
     }
     
-    public func setKeepScreenOn(_ keepOn: Bool) {
+    package func setKeepScreenOn(_ keepOn: Bool) {
         systemSettings.keepScreenOn.send(keepOn)
     }
     
-    public func openBluetoothPermissions() {
+    package func openBluetoothPermissions() {
         systemSettings.openPermissions()
     }
     
-    public func openLocationPermissions() {
+    package func openLocationPermissions() {
         systemSettings.openPermissions()
     }
     
-    public func refreshBackgroundStatuses() {
+    package func refreshBackgroundStatuses() {
         locationBackgroundStatusText = systemSettings.locationBackgroundStatus
         bluetoothBackgroundStatusText = systemSettings.bluetoothBackgroundStatus
     }

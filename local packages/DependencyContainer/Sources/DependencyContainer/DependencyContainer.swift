@@ -19,13 +19,9 @@ import SettingsVM
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``MainViewModel``, from which all other objects are indirectly accessed.
 @MainActor
 final public class DependencyContainer {
-    private let settingsStorage = UserDefaults.standard
-        .asAppStorage()
-        .withNamespacedKeys("Settings")
-        .asSettingsStorage()
-    private let settings: DefaultMetricsSettings
-    private let logger = ConsoleLogger()
-    private let metricsProvider: MetricsProvider
+    private let settingsDependencies = SettingsDependencies(
+        appStorage: UserDefaults.standard.asAppStorage(),
+    )
     
     // Retain the publishers to keep their timers running
     private let speedPublisher: AnyPublisher<Measurement<UnitSpeed>, Never>
@@ -43,7 +39,7 @@ final public class DependencyContainer {
     private let autoPauseService: AutoPauseService
 
     public init() {
-        settings = DefaultMetricsSettings(storage: settingsStorage)
+        let settings = settingsDependencies.metricsSettings
         speedAndDistanceService = SpeedAndDistanceService()
 
         // Create TimeService with 1 second period
@@ -92,22 +88,16 @@ final public class DependencyContainer {
         
         // Time with auto-pause
         timePublisher = timeService.timePulse.accumulating(whileActive: autoPauseService.activityState)
-        
-        metricsProvider = MetricsProvider(speed: speedPublisher, cadence: cadencePublisher)
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
         DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher, time: timePublisher, distance: distancePublisher)
     }
     
-    private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
-        SettingsVM.SettingsViewModel(metricsSettings: settings, storage: settingsStorage)
-    }
-    
     public func getMainViewModel() -> MainViewModel {
         return MainViewModel(
             dashboardViewModelFactory: getDashboardViewModel,
-            settingsViewModelFactory: getSettingsViewModel
+            settingsViewModelFactory: settingsDependencies.getSettingsViewModel
         )
     }
 }

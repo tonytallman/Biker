@@ -130,7 +130,7 @@ public struct SettingsView: View {
     SettingsView(
         viewModel: SettingsViewModel(
             metricsSettings: SettingsModel.DefaultMetricsSettings(storage: storage),
-            storage: storage
+            systemSettings: SettingsModel.DefaultSystemSettings(storage: storage),
         )
     )
 }

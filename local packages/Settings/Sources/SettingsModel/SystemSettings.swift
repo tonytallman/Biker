@@ -9,7 +9,7 @@ import Combine
 import Foundation
 
 @MainActor
-package protocol SystemSettings {
+public protocol SystemSettings {
     var keepScreenOn: any Subject<Bool, Never> { get }
     var willEnterForeground: AnyPublisher<Void, Never> { get }
     var locationBackgroundStatus: String { get }
@@ -21,7 +21,7 @@ package protocol SystemSettings {
 private let keepScreenOnKey = "keepScreenOn"
 
 @MainActor
-package final class DefaultSystemSettings: SystemSettings {
+public final class DefaultSystemSettings: SystemSettings {
     private let storage: SettingsStorage
     private let bluetoothPermissionsSettings: BluetoothPermissionsSettings
     private let locationPermissionsSettings: LocationPermissionsSettings
@@ -30,9 +30,9 @@ package final class DefaultSystemSettings: SystemSettings {
     private let foregroundNotifier: ForegroundNotifier
     private var cancellables: Set<AnyCancellable> = []
 
-    package let keepScreenOn: any Subject<Bool, Never>
+    public let keepScreenOn: any Subject<Bool, Never>
 
-    package convenience init(storage: SettingsStorage) {
+    public convenience init(storage: SettingsStorage) {
         self.init(
             storage: storage,
             bluetoothPermissionsSettings: DefaultBluetoothPermissionsSettings(),
@@ -67,23 +67,23 @@ package final class DefaultSystemSettings: SystemSettings {
         }.store(in: &cancellables)
     }
 
-    package var willEnterForeground: AnyPublisher<Void, Never> {
+    public var willEnterForeground: AnyPublisher<Void, Never> {
         foregroundNotifier.willEnterForeground
     }
 
-    package var locationBackgroundStatus: String {
+    public var locationBackgroundStatus: String {
         locationPermissionsSettings.locationBackgroundStatus
     }
 
-    package var bluetoothBackgroundStatus: String {
+    public var bluetoothBackgroundStatus: String {
         bluetoothPermissionsSettings.bluetoothBackgroundStatus
     }
 
-    package func openPermissions() {
+    public func openPermissions() {
         systemSettingsNavigator.openAppPermissions()
     }
 
-    package func setIdleTimerDisabled(_ disabled: Bool) {
+    public func setIdleTimerDisabled(_ disabled: Bool) {
         screenController.setIdleTimerDisabled(disabled)
     }
 }
