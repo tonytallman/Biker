@@ -19,7 +19,11 @@ import SettingsVM
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``MainViewModel``, from which all other objects are indirectly accessed.
 @MainActor
 final public class DependencyContainer {
-    private let settings = Settings()
+    private let settingsStorage = UserDefaults.standard
+        .asAppStorage()
+        .withNamespacedKeys("Settings")
+        .asSettingsStorage()
+    private let settings: DefaultMetricsSettings
     private let logger = ConsoleLogger()
     private let metricsProvider: MetricsProvider
     
@@ -39,8 +43,9 @@ final public class DependencyContainer {
     private let autoPauseService: AutoPauseService
 
     public init() {
+        settings = DefaultMetricsSettings(storage: settingsStorage)
         speedAndDistanceService = SpeedAndDistanceService()
-        
+
         // Create TimeService with 1 second period
         timeService = TimeService(period: Measurement(value: 1.0, unit: .seconds))
         
@@ -96,7 +101,7 @@ final public class DependencyContainer {
     }
     
     private func getSettingsViewModel() -> SettingsVM.SettingsViewModel {
-        SettingsVM.SettingsViewModel(metricsSettings: settings)
+        SettingsVM.SettingsViewModel(metricsSettings: settings, storage: settingsStorage)
     }
     
     public func getMainViewModel() -> MainViewModel {

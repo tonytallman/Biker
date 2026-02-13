@@ -6,6 +6,7 @@
 //
 
 import Combine
+import Foundation
 
 @MainActor
 package protocol SystemSettings {
@@ -17,18 +18,23 @@ package protocol SystemSettings {
     func setIdleTimerDisabled(_ disabled: Bool)
 }
 
+private let keepScreenOnKey = "keepScreenOn"
+
 @MainActor
 package final class DefaultSystemSettings: SystemSettings {
+    private let storage: SettingsStorage
     private let bluetoothPermissionsSettings: BluetoothPermissionsSettings
     private let locationPermissionsSettings: LocationPermissionsSettings
     private let systemSettingsNavigator: SystemSettingsNavigator
     private let screenController: ScreenController
     private let foregroundNotifier: ForegroundNotifier
+    private var cancellables: Set<AnyCancellable> = []
 
-    package let keepScreenOn: any Subject<Bool, Never> = CurrentValueSubject<Bool, Never>(true)
+    package let keepScreenOn: any Subject<Bool, Never>
 
-    @MainActor package convenience init() {
+    package convenience init(storage: SettingsStorage) {
         self.init(
+            storage: storage,
             bluetoothPermissionsSettings: DefaultBluetoothPermissionsSettings(),
             locationPermissionsSettings: DefaultLocationPermissionsSettings(),
             systemSettingsNavigator: DefaultSystemSettingsNavigator(),
@@ -38,17 +44,27 @@ package final class DefaultSystemSettings: SystemSettings {
     }
 
     package init(
+        storage: SettingsStorage,
         bluetoothPermissionsSettings: BluetoothPermissionsSettings,
         locationPermissionsSettings: LocationPermissionsSettings,
         systemSettingsNavigator: SystemSettingsNavigator,
         screenController: ScreenController,
         foregroundNotifier: ForegroundNotifier
     ) {
+        self.storage = storage
         self.bluetoothPermissionsSettings = bluetoothPermissionsSettings
         self.locationPermissionsSettings = locationPermissionsSettings
         self.systemSettingsNavigator = systemSettingsNavigator
         self.screenController = screenController
         self.foregroundNotifier = foregroundNotifier
+
+        let initialKeepScreenOn = (storage.get(forKey: keepScreenOnKey) as? Bool) ?? true
+        let subject = CurrentValueSubject<Bool, Never>(initialKeepScreenOn)
+        self.keepScreenOn = subject
+
+        subject.dropFirst().sink { [storage] value in
+            storage.set(value: value, forKey: keepScreenOnKey)
+        }.store(in: &cancellables)
     }
 
     package var willEnterForeground: AnyPublisher<Void, Never> {

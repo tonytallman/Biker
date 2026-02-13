@@ -126,9 +126,11 @@ public struct SettingsView: View {
 }
 
 #Preview {
+    let storage = SettingsModel.InMemorySettingsStorage()
     SettingsView(
         viewModel: SettingsViewModel(
-            metricsSettings: SettingsModel.Settings()
+            metricsSettings: SettingsModel.DefaultMetricsSettings(storage: storage),
+            storage: storage
         )
     )
 }

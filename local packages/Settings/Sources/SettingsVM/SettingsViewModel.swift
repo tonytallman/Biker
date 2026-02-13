@@ -33,10 +33,10 @@ open class SettingsViewModel {
 
     public var keepScreenOn: Bool = true
 
-    public convenience init(metricsSettings: MetricsSettings) {
+    public convenience init(metricsSettings: MetricsSettings, storage: SettingsStorage) {
         self.init(
             metricsSettings: metricsSettings,
-            systemSettings: DefaultSystemSettings(),
+            systemSettings: DefaultSystemSettings(storage: storage),
         )
     }
     
@@ -118,5 +118,3 @@ open class SettingsViewModel {
         bluetoothBackgroundStatusText = systemSettings.bluetoothBackgroundStatus
     }
 }
-
-extension SettingsModel.Settings: MetricsSettings {}

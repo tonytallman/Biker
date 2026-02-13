@@ -5,9 +5,10 @@
 //  Created by Tony Tallman on 1/10/25.
 //
 
+import Foundation
 import XCTest
 
-@testable import DependencyContainer
+import DependencyContainer
 
 final class DependencyContainerTests: XCTestCase {
     func testExample() throws {
