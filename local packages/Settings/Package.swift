@@ -52,7 +52,7 @@ let package = Package(
         ),
         .target(
             name: "SettingsUI",
-            dependencies: ["SettingsVM", "SettingsModel", "DesignSystem", "SettingsStrings"]
+            dependencies: ["SettingsVM", "DesignSystem", "SettingsStrings"]
         ),
         .testTarget(
             name: "SettingsModelTests",
