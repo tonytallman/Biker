@@ -1,0 +1,13 @@
+---
+description: Unit test targets must be in the Biker scheme and use Swift Testing.
+globs:
+  - local packages/**/Package.swift
+  - Biker.xcodeproj/**
+alwaysApply: false
+---
+# Unit Testing Conventions
+
+When adding unit tests or a new test target:
+- Add the target to the `Biker` scheme's Test action.
+- Use [Swift Testing](https://developer.apple.com/documentation/testing): `import Testing`, `@Test`, `#expect`.
+- Do not use XCTest for new tests.

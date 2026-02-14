@@ -1,0 +1,17 @@
+---
+description: Apply this rule when adding a new local Swift package.
+globs:
+  - local packages/**/Package.swift
+  - templates/Package.*.swift
+  - Biker.xcodeproj/**
+alwaysApply: false
+---
+# New Swift Package
+
+When creating a local Swift package:
+- Create it in `local packages/<PackageName>/`.
+- Choose one template: `templates/Package.logic.swift` or `templates/Package.view.swift`.
+- Replace every `[name]` placeholder in `Package.swift`.
+- Keep package entries alphabetized in the project explorer.
+- Add new package targets to `Biker.xcodeproj`.
+- Ask only if package type or project-specific structure is unclear.
