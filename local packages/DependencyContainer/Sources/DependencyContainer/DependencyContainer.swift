@@ -38,6 +38,12 @@ final public class DependencyContainer {
     // Retain AutoPauseService to keep subscriptions active
     private let autoPauseService: AutoPauseService
 
+    /// Shared metric scope for the current ride (auto-pause, future persistence).
+    private let currentRide: MetricContext
+
+    private let distanceMetric: AccumulatingMetric<UnitLength>
+    private let timeMetric: AccumulatingMetric<UnitDuration>
+
     public init() {
         let settings = settingsDependencies.metricsSettings
         speedAndDistanceService = SpeedAndDistanceService()
@@ -57,14 +63,19 @@ final public class DependencyContainer {
             speed: rawSpeed,
             threshold: settings.autoPauseThreshold
         )
-        
+
+        currentRide = MetricContext(autoPauseService: autoPauseService)
+
         // Display-converted speed
         speedPublisher = rawSpeed
             .inUnits(settings.speedUnits)
         cadencePublisher = fake.cadence
             .inUnits(Just(.revolutionsPerMinute))
-        distancePublisher = fake.distanceDelta
-            .accumulating(whileActive: autoPauseService.activityState)
+        distanceMetric = AccumulatingMetric<UnitLength>(
+            source: fake.distanceDelta,
+            context: currentRide
+        )
+        distancePublisher = distanceMetric.publisher
             .inUnits(settings.distanceUnits)
         #else
         // Raw speed (before unit conversion)
@@ -75,19 +86,27 @@ final public class DependencyContainer {
             speed: rawSpeed,
             threshold: settings.autoPauseThreshold
         )
-        
+
+        currentRide = MetricContext(autoPauseService: autoPauseService)
+
         // Display-converted speed
         speedPublisher = rawSpeed
             .inUnits(settings.speedUnits)
         cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
             .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
-        distancePublisher = speedAndDistanceService.distanceDelta
-            .accumulating(whileActive: autoPauseService.activityState)
+        distanceMetric = AccumulatingMetric<UnitLength>(
+            source: speedAndDistanceService.distanceDelta,
+            context: currentRide
+        )
+        distancePublisher = distanceMetric.publisher
             .inUnits(settings.distanceUnits)
         #endif
-        
-        // Time with auto-pause
-        timePublisher = timeService.timePulse.accumulating(whileActive: autoPauseService.activityState)
+
+        timeMetric = AccumulatingMetric<UnitDuration>(
+            source: timeService.timePulse,
+            context: currentRide
+        )
+        timePublisher = timeMetric.publisher
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {

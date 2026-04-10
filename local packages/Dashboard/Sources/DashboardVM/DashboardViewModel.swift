@@ -15,10 +15,10 @@ import DashboardModel
 @MainActor
 @Observable
 public final class DashboardViewModel {
-    package var primaryMetric: Metric = Metric(title: "Speed", value: "--", units: "--")
-    package var secondaryMetric1: Metric = Metric(title: "TIME", value: "--", units: "")
-    package var secondaryMetric2: Metric = Metric(title: "DISTANCE", value: "--", units: "")
-    package var secondaryMetric3: Metric = Metric(title: "CADENCE", value: "--", units: "--")
+    package var primaryMetric: FormattedMetric = FormattedMetric(title: "Speed", value: "--", units: "--")
+    package var secondaryMetric1: FormattedMetric = FormattedMetric(title: "TIME", value: "--", units: "")
+    package var secondaryMetric2: FormattedMetric = FormattedMetric(title: "DISTANCE", value: "--", units: "")
+    package var secondaryMetric3: FormattedMetric = FormattedMetric(title: "CADENCE", value: "--", units: "--")
     
     private var cancellables: Set<AnyCancellable> = []
     
@@ -38,7 +38,7 @@ public final class DashboardViewModel {
         speed
             .sink { [weak self] speedMeasurement in
                 guard let self else { return }
-                self.primaryMetric = Metric(
+                self.primaryMetric = FormattedMetric(
                     title: "Speed",
                     value: self.formatSpeed(speedMeasurement),
                     units: speedMeasurement.unit.symbol
@@ -50,7 +50,7 @@ public final class DashboardViewModel {
         cadence
             .sink { [weak self] cadenceMeasurement in
                 guard let self else { return }
-                self.secondaryMetric3 = Metric(
+                self.secondaryMetric3 = FormattedMetric(
                     title: "CADENCE",
                     value: self.formatCadence(cadenceMeasurement),
                     units: cadenceMeasurement.unit.symbol
@@ -62,7 +62,7 @@ public final class DashboardViewModel {
         time
             .sink { [weak self] timeMeasurement in
                 guard let self else { return }
-                self.secondaryMetric1 = Metric(
+                self.secondaryMetric1 = FormattedMetric(
                     title: "TIME",
                     value: self.formatTime(timeMeasurement),
                     units: ""
@@ -74,7 +74,7 @@ public final class DashboardViewModel {
         distance
             .sink { [weak self] distanceMeasurement in
                 guard let self else { return }
-                self.secondaryMetric2 = Metric(
+                self.secondaryMetric2 = FormattedMetric(
                     title: "DISTANCE",
                     value: self.formatDistance(distanceMeasurement),
                     units: distanceMeasurement.unit.symbol

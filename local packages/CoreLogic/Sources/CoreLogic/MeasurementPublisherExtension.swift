@@ -8,6 +8,11 @@
 import Combine
 import Foundation
 
+private struct StatisticScanState<UnitType: Dimension> {
+    var accumulated: Measurement<UnitType>?
+    var lastSeq: Int
+}
+
 extension Publisher where Failure == Never {
     /// Converts the measurement publisher to the specified units.
     /// Works with any `Measurement` type such as `Measurement<UnitSpeed>`, `Measurement<UnitLength>`, or `Measurement<UnitFrequency>`.
@@ -29,6 +34,47 @@ extension Publisher where Failure == Never {
             .eraseToAnyPublisher()
     }
     
+    /// Reduces measurement values with a custom function, but only while activity state is `.active`.
+    /// When activity state is `.paused`, the last reduced value is held and new source samples are ignored.
+    /// Output values use the base unit for the dimension.
+    ///
+    /// - Parameters:
+    ///   - activityState: Whether reduction runs for each new source value.
+    ///   - initial: Seed for the statistic. Pass `nil` to use the first **active** sample as the seed (for running max/min).
+    ///   - reduce: Combines the current statistic with the next sample (both in base units).
+    /// - Returns: A publisher emitting the current statistic whenever it may have changed.
+    public func statistic<UnitType: Dimension>(
+        whileActive activityState: some Publisher<ActivityState, Never>,
+        initial: Measurement<UnitType>?,
+        reduce: @escaping (Measurement<UnitType>, Measurement<UnitType>) -> Measurement<UnitType>
+    ) -> AnyPublisher<Measurement<UnitType>, Never>
+    where Output == Measurement<UnitType> {
+        let zero = Measurement<UnitType>(value: 0, unit: UnitType.baseUnit())
+        let tagged = self.scan((seq: 0, value: zero)) { state, measurement in
+            (seq: state.seq + 1, value: measurement)
+        }
+
+        let seed = initial?.converted(to: UnitType.baseUnit())
+
+        return Publishers.CombineLatest(tagged, activityState)
+            .scan(StatisticScanState(accumulated: seed, lastSeq: 0)) { state, input in
+                let ((seq, measurement), activity) = input
+                guard activity == .active, seq != state.lastSeq else {
+                    return StatisticScanState(accumulated: state.accumulated, lastSeq: seq)
+                }
+                let mBase = measurement.converted(to: UnitType.baseUnit())
+                let newAccumulated: Measurement<UnitType>
+                if let acc = state.accumulated {
+                    newAccumulated = reduce(acc, mBase)
+                } else {
+                    newAccumulated = mBase
+                }
+                return StatisticScanState(accumulated: newAccumulated, lastSeq: seq)
+            }
+            .compactMap(\.accumulated)
+            .eraseToAnyPublisher()
+    }
+
     /// Accumulates measurement values into a running total, but only while activity state is `.active`.
     /// When activity state is `.paused`, accumulation stops and the last accumulated value is maintained.
     /// The output uses the base unit for the dimension (e.g., meters for UnitLength).
@@ -40,26 +86,6 @@ extension Publisher where Failure == Never {
     ) -> AnyPublisher<Measurement<UnitType>, Never>
     where Output == Measurement<UnitType> {
         let zero = Measurement<UnitType>(value: 0, unit: UnitType.baseUnit())
-
-        // Tag each measurement with an incrementing sequence number
-        let tagged = self.scan((seq: 0, value: zero)) { state, measurement in
-            (seq: state.seq + 1, value: measurement)
-        }
-
-        return Publishers.CombineLatest(tagged, activityState)
-            .scan((accumulated: zero, lastSeq: 0)) { state, input in
-                let ((seq, measurement), activity) = input
-                guard activity == .active, seq != state.lastSeq else {
-                    return (accumulated: state.accumulated, lastSeq: seq)
-                }
-                let newValue = Measurement<UnitType>(
-                    value: state.accumulated.value
-                         + measurement.converted(to: UnitType.baseUnit()).value,
-                    unit: UnitType.baseUnit()
-                )
-                return (accumulated: newValue, lastSeq: seq)
-            }
-            .map(\.accumulated)
-            .eraseToAnyPublisher()
+        return statistic(whileActive: activityState, initial: zero) { $0 + $1 }
     }
 }
