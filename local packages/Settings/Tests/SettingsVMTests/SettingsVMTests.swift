@@ -126,6 +126,22 @@ struct SettingsViewModelTests {
         #expect(viewModel.locationBackgroundStatusText == "Always")
         #expect(viewModel.bluetoothBackgroundStatusText == "Allowed")
     }
+
+    @Test("Sensors section defaults are exposed")
+    func testSensorsSectionDefaultsAreExposed() {
+        #expect(viewModel.sensorsSectionTitle == "Sensors")
+        #expect(viewModel.scanButtonTitle == "scan")
+        #expect(viewModel.knownSensors.isEmpty)
+    }
+
+    @Test("Scan for sensors is a no-op")
+    func testScanForSensorsIsANoOp() {
+        viewModel.knownSensors = [SensorViewModel(title: "Speed Sensor")]
+
+        viewModel.scanForSensors()
+
+        #expect(viewModel.knownSensors.map(\.title) == ["Speed Sensor"])
+    }
     
     @Test("Open location permissions delegates to location permissions settings")
     func testOpenLocationPermissionsDelegatesToLocationPermissionsSettings() {

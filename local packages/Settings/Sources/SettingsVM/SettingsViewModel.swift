@@ -13,6 +13,14 @@ import Observation
 
 import SettingsModel
 
+package struct SensorViewModel {
+    package let title: String
+
+    package init(title: String) {
+        self.title = title
+    }
+}
+
 /// Base class for settings view models.
 @MainActor
 @Observable
@@ -27,6 +35,7 @@ open class SettingsViewModel {
     package var currentAutoPauseThreshold: Measurement<UnitSpeed> = .init(value: 3, unit: .milesPerHour)
     package var locationBackgroundStatusText: String = ""
     package var bluetoothBackgroundStatusText: String = ""
+    package var knownSensors: [SensorViewModel] = []
     
     package let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     package let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
@@ -109,5 +118,8 @@ open class SettingsViewModel {
     package func refreshBackgroundStatuses() {
         locationBackgroundStatusText = systemSettings.locationBackgroundStatus
         bluetoothBackgroundStatusText = systemSettings.bluetoothBackgroundStatus
+    }
+
+    package func scanForSensors() {
     }
 }
