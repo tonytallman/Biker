@@ -11,9 +11,9 @@ import DashboardModel
 import DesignSystem
 
 struct SmallMetricView: View {
-    let metric: FormattedMetric
+    let metric: MetricViewModel
 
-    init(metric: FormattedMetric) {
+    init(metric: MetricViewModel) {
         self.metric = metric
     }
     
@@ -37,7 +37,7 @@ struct SmallMetricView: View {
 
 #Preview {
     SmallMetricView(
-        metric: FormattedMetric(title: "CADENCE", value: "85", units: "rpm")
+        metric: MetricViewModel(title: "CADENCE", value: "85", units: "rpm")
     )
     .padding()
     .background(Color.bikerSectionBackground)

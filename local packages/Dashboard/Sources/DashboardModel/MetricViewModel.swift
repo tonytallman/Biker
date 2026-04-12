@@ -1,11 +1,11 @@
 //
-//  FormattedMetric.swift
+//  MetricViewModel.swift
 //  PhoneUI
 //
 //  Encapsulates title, value, and optional units for a formatted metric shown in the UI.
 //
 
-package struct FormattedMetric {
+package struct MetricViewModel {
     package let title: String
     package let value: String
     package let units: String
