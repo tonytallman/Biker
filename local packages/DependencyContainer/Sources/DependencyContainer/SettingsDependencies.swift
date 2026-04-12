@@ -11,6 +11,7 @@ import SettingsVM
 @MainActor
 final class SettingsDependencies {
     private let systemSettings: SystemSettings
+    private let sensorSettings: SensorSettings
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
@@ -19,9 +20,14 @@ final class SettingsDependencies {
             .asSettingsStorage()
         systemSettings = DefaultSystemSettings(storage: settingsStorage)
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
+        sensorSettings = DefaultSensorSettings()
     }
     
     func getSettingsViewModel() -> SettingsViewModel {
-        SettingsVM.SettingsViewModel(metricsSettings: metricsSettings, systemSettings: systemSettings)
+        SettingsVM.SettingsViewModel(
+            metricsSettings: metricsSettings,
+            systemSettings: systemSettings,
+            sensorSettings: sensorSettings,
+        )
     }
 }

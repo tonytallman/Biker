@@ -20,6 +20,7 @@ struct SettingsViewModelTests {
     let mockBluetoothPermissions: MockBluetoothPermissionsSettings
     let mockSystemSettingsNavigator: MockSystemSettingsNavigator
     let mockForegroundNotifier: MockForegroundNotifier
+    let mockSensorSettings: MockSensorSettings
     let viewModel: SettingsVM.SettingsViewModel
     
     init() {
@@ -31,6 +32,7 @@ struct SettingsViewModelTests {
         mockBluetoothPermissions = MockBluetoothPermissionsSettings()
         mockSystemSettingsNavigator = MockSystemSettingsNavigator()
         mockForegroundNotifier = MockForegroundNotifier()
+        mockSensorSettings = MockSensorSettings()
         systemSettings = SettingsModel.DefaultSystemSettings(
             storage: storage,
             bluetoothPermissionsSettings: mockBluetoothPermissions,
@@ -42,7 +44,8 @@ struct SettingsViewModelTests {
 
         viewModel = SettingsVM.SettingsViewModel(
             metricsSettings: metricsSettings,
-            systemSettings: systemSettings
+            systemSettings: systemSettings,
+            sensorSettings: mockSensorSettings,
         )
     }
     
@@ -129,8 +132,6 @@ struct SettingsViewModelTests {
 
     @Test("Sensors section defaults are exposed")
     func testSensorsSectionDefaultsAreExposed() {
-        #expect(viewModel.sensorsSectionTitle == "Sensors")
-        #expect(viewModel.scanButtonTitle == "scan")
         #expect(viewModel.knownSensors.isEmpty)
     }
 

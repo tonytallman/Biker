@@ -110,13 +110,18 @@ public struct SettingsView: View {
                     }
                 }
 
-                Section(header: Text("Sensors", bundle: .settingsStrings, comment: "Section header for sensors like speed and cadence")) {
+                Section(header:
+                    HStack {
+                        Text("Sensors", bundle: .settingsStrings, comment: "Section header for sensors like speed and cadence")
+                        Spacer()
+                        Button(action: viewModel.scanForSensors) {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                ) {
                     ForEach(viewModel.knownSensors, id: \.title) { sensor in
                         Text(sensor.title)
-                    }
-
-                    Button(action: viewModel.scanForSensors) {
-                        Text("scan", bundle: .settingsStrings, comment: "Title of button to initiate a sensor scan")
                     }
                 }
             }
@@ -141,6 +146,7 @@ public struct SettingsView: View {
         viewModel: SettingsViewModel(
             metricsSettings: SettingsModel.DefaultMetricsSettings(storage: storage),
             systemSettings: SettingsModel.DefaultSystemSettings(storage: storage),
+            sensorSettings: SettingsModel.PreviewSensorSettings(),
         )
     )
 }

@@ -6,8 +6,6 @@
 //
 
 import Combine
-import CoreBluetooth
-import CoreLocation
 import Foundation
 import Observation
 
@@ -28,6 +26,7 @@ open class SettingsViewModel {
 
     private let metricsSettings: MetricsSettings
     private let systemSettings: SystemSettings
+    private let sensorSettings: SensorSettings
     private var cancellables: Set<AnyCancellable> = []
     
     package var currentSpeedUnits: UnitSpeed = .milesPerHour
@@ -45,9 +44,11 @@ open class SettingsViewModel {
     public init(
         metricsSettings: MetricsSettings,
         systemSettings: SystemSettings,
+        sensorSettings: SensorSettings,
     ) {
         self.metricsSettings = metricsSettings
         self.systemSettings = systemSettings
+        self.sensorSettings = sensorSettings
         
         // Subscribe to settings changes
         metricsSettings.speedUnits
@@ -89,6 +90,13 @@ open class SettingsViewModel {
         
         // Initial refresh of background statuses
         refreshBackgroundStatuses()
+
+        sensorSettings.sensors
+            .sink { [weak self] titles in
+                guard let self else { return }
+                self.knownSensors = titles.map { SensorViewModel(title: $0) }
+            }
+            .store(in: &cancellables)
     }
     
     package func setSpeedUnits(_ units: UnitSpeed) {
@@ -121,5 +129,6 @@ open class SettingsViewModel {
     }
 
     package func scanForSensors() {
+        sensorSettings.scan()
     }
 }
