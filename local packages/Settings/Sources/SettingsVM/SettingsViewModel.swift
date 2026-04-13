@@ -11,14 +11,6 @@ import Observation
 
 import SettingsModel
 
-package struct SensorViewModel {
-    package let title: String
-
-    package init(title: String) {
-        self.title = title
-    }
-}
-
 /// Base class for settings view models.
 @MainActor
 @Observable
