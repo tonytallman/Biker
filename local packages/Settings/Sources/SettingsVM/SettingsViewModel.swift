@@ -123,4 +123,8 @@ open class SettingsViewModel {
     package func scanForSensors() {
         sensorSettings.scan()
     }
+
+    package func makeScanViewModel() -> ScanViewModel {
+        ScanViewModel(sensorSettings: sensorSettings)
+    }
 }

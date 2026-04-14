@@ -19,10 +19,6 @@ public final class BluetoothSensorManager: NSObject {
 
     private var peripheralsByID: [UUID: CBPeripheral] = [:]
     private var calculatorsByID: [UUID: CSCDeltaCalculator] = [:]
-    private var scanSessionEndTask: Task<Void, Never>?
-
-    /// After this delay from `startScan()`, connects to the discovered peripheral with the strongest RSSI (if any), then stops scanning.
-    public var autoConnectDelayNanoseconds: UInt64 = 3_000_000_000
 
     public override init() {
         self.cscServiceUUID = CBUUID(string: "1816")
@@ -48,7 +44,6 @@ public final class BluetoothSensorManager: NSObject {
     }
 
     public func startScan() {
-        scanSessionEndTask?.cancel()
         discoveredSubject.send([])
 
         guard central.state == .poweredOn else { return }
@@ -57,17 +52,9 @@ public final class BluetoothSensorManager: NSObject {
             withServices: [cscServiceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
-
-        let delay = autoConnectDelayNanoseconds
-        scanSessionEndTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: delay)
-            self?.finishScanSessionAndAutoConnect()
-        }
     }
 
     public func stopScan() {
-        scanSessionEndTask?.cancel()
-        scanSessionEndTask = nil
         central.stopScan()
     }
 
@@ -77,13 +64,6 @@ public final class BluetoothSensorManager: NSObject {
         guard central.state == .poweredOn else { return }
         updateConnectedState(id: peripheralID, name: peripheral.name ?? "Sensor", state: .connecting)
         central.connect(peripheral, options: nil)
-    }
-
-    private func finishScanSessionAndAutoConnect() {
-        stopScan()
-        let discovered = discoveredSubject.value
-        guard let best = discovered.max(by: { $0.rssi < $1.rssi }) else { return }
-        connect(to: best.id)
     }
 
     private static func mergedSensorTitles(

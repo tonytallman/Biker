@@ -15,7 +15,8 @@ import SettingsVM
 
 public struct SettingsView: View {
     @State var viewModel: SettingsViewModel
-    
+    @State private var showingScanSheet = false
+
     private static let unitFormatter: MeasurementFormatter = {
         let formatter = MeasurementFormatter()
         formatter.unitStyle = .long
@@ -114,7 +115,9 @@ public struct SettingsView: View {
                     HStack {
                         Text("Sensors", bundle: .settingsStrings, comment: "Section header for sensors like speed and cadence")
                         Spacer()
-                        Button(action: viewModel.scanForSensors) {
+                        Button {
+                            showingScanSheet = true
+                        } label: {
                             Image(systemName: "plus")
                         }
                         .buttonStyle(.borderless)
@@ -130,6 +133,9 @@ public struct SettingsView: View {
         .background(Color.bikerBackground.ignoresSafeArea())
         .onAppear {
             viewModel.refreshBackgroundStatuses()
+        }
+        .sheet(isPresented: $showingScanSheet) {
+            ScanView(viewModel: viewModel.makeScanViewModel())
         }
     }
     
