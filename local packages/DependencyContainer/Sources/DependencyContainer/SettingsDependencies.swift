@@ -5,6 +5,7 @@
 //  Created by Tony Tallman on 2/13/26.
 //
 
+import CyclingSpeedAndCadenceService
 import SettingsModel
 import SettingsVM
 
@@ -12,6 +13,7 @@ import SettingsVM
 final class SettingsDependencies {
     private let systemSettings: SystemSettings
     private let sensorSettings: SensorSettings
+    private let bluetoothSensorManager: BluetoothSensorManager
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
@@ -20,7 +22,9 @@ final class SettingsDependencies {
             .asSettingsStorage()
         systemSettings = DefaultSystemSettings(storage: settingsStorage)
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
-        sensorSettings = DefaultSensorSettings()
+        let bluetoothSensorManager = BluetoothSensorManager()
+        self.bluetoothSensorManager = bluetoothSensorManager
+        sensorSettings = BluetoothSensorSettingsAdaptor(manager: bluetoothSensorManager)
     }
     
     func getSettingsViewModel() -> SettingsViewModel {

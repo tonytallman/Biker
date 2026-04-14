@@ -25,7 +25,6 @@ public final class DefaultSensorSettings: SensorSettings {
     public func scan() {}
 }
 
-#if DEBUG
 @MainActor
 public struct PreviewSensorSettings: SensorSettings {
     public let sensors: AnyPublisher<[String], Never>
@@ -41,5 +40,3 @@ public struct PreviewSensorSettings: SensorSettings {
         "Schwinn IC400",
     ]
 }
-#endif
-
