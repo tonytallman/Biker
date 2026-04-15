@@ -137,7 +137,10 @@ struct SettingsViewModelTests {
 
     @Test("Scan for sensors is a no-op")
     func testScanForSensorsIsANoOp() {
-        viewModel.knownSensors = [SensorViewModel(title: "Speed Sensor")]
+        let id = UUID()
+        viewModel.knownSensors = [
+            SensorViewModel(sensorID: id, title: "Speed Sensor", connectionState: .disconnected),
+        ]
 
         viewModel.scanForSensors()
 

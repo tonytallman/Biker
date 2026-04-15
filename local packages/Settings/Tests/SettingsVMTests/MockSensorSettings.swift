@@ -12,10 +12,10 @@ import SettingsModel
 
 @MainActor
 final class MockSensorSettings: SensorSettings {
-    private let sensorsSubject = CurrentValueSubject<[String], Never>([])
+    private let sensorsSubject = CurrentValueSubject<[ConnectedSensorInfo], Never>([])
     private let discoveredSensorsSubject = CurrentValueSubject<[DiscoveredSensorInfo], Never>([])
 
-    var sensors: AnyPublisher<[String], Never> {
+    var sensors: AnyPublisher<[ConnectedSensorInfo], Never> {
         sensorsSubject.eraseToAnyPublisher()
     }
 
@@ -26,7 +26,11 @@ final class MockSensorSettings: SensorSettings {
     private(set) var scanCallCount = 0
     private(set) var stopScanCallCount = 0
     private(set) var connectCallCount = 0
+    private(set) var disconnectCallCount = 0
+    private(set) var forgetCallCount = 0
     private(set) var lastConnectedSensorID: UUID?
+    private(set) var lastDisconnectedSensorID: UUID?
+    private(set) var lastForgottenSensorID: UUID?
 
     func scan() {
         scanCallCount += 1
@@ -41,8 +45,18 @@ final class MockSensorSettings: SensorSettings {
         lastConnectedSensorID = sensorID
     }
 
-    func setSensorTitles(_ titles: [String]) {
-        sensorsSubject.send(titles)
+    func disconnect(sensorID: UUID) {
+        disconnectCallCount += 1
+        lastDisconnectedSensorID = sensorID
+    }
+
+    func forget(sensorID: UUID) {
+        forgetCallCount += 1
+        lastForgottenSensorID = sensorID
+    }
+
+    func setSensors(_ sensors: [ConnectedSensorInfo]) {
+        sensorsSubject.send(sensors)
     }
 
     func setDiscoveredSensors(_ sensors: [DiscoveredSensorInfo]) {

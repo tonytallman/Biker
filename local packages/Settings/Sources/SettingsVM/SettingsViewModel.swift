@@ -84,9 +84,11 @@ open class SettingsViewModel {
         refreshBackgroundStatuses()
 
         sensorSettings.sensors
-            .sink { [weak self] titles in
+            .sink { [weak self] sensors in
                 guard let self else { return }
-                self.knownSensors = titles.map { SensorViewModel(title: $0) }
+                self.knownSensors = sensors.map {
+                    SensorViewModel(sensorID: $0.id, title: $0.name, connectionState: $0.connectionState)
+                }
             }
             .store(in: &cancellables)
     }
@@ -126,5 +128,13 @@ open class SettingsViewModel {
 
     package func makeScanViewModel() -> ScanViewModel {
         ScanViewModel(sensorSettings: sensorSettings)
+    }
+
+    package func disconnectSensor(id: UUID) {
+        sensorSettings.disconnect(sensorID: id)
+    }
+
+    package func forgetSensor(id: UUID) {
+        sensorSettings.forget(sensorID: id)
     }
 }

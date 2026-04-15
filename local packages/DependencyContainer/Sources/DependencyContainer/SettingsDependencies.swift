@@ -17,14 +17,16 @@ final class SettingsDependencies {
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
-        let settingsStorage = appStorage
-            .withNamespacedKeys("Settings")
-            .asSettingsStorage()
+        let namespacedAppStorage = appStorage.withNamespacedKeys("Settings")
+        let settingsStorage = namespacedAppStorage.asSettingsStorage()
         systemSettings = DefaultSystemSettings(storage: settingsStorage)
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
         let bluetoothSensorManager = BluetoothSensorManager()
         self.bluetoothSensorManager = bluetoothSensorManager
-        sensorSettings = BluetoothSensorSettingsAdaptor(manager: bluetoothSensorManager)
+        sensorSettings = BluetoothSensorSettingsAdaptor(
+            manager: bluetoothSensorManager,
+            appStorage: namespacedAppStorage
+        )
     }
     
     func getSettingsViewModel() -> SettingsViewModel {

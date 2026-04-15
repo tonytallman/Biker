@@ -15,7 +15,7 @@ public final class BluetoothSensorManager: NSObject {
     private let cscMeasurementUUID: CBUUID
 
     private let discoveredSubject = CurrentValueSubject<[DiscoveredSensor], Never>([])
-    private let connectedSubject = CurrentValueSubject<[ConnectedSensor], Never>([])
+    private let knownSensorsSubject = CurrentValueSubject<[ConnectedSensor], Never>([])
 
     private var peripheralsByID: [UUID: CBPeripheral] = [:]
     private var calculatorsByID: [UUID: CSCDeltaCalculator] = [:]
@@ -32,15 +32,8 @@ public final class BluetoothSensorManager: NSObject {
         discoveredSubject.eraseToAnyPublisher()
     }
 
-    public var connectedSensors: AnyPublisher<[ConnectedSensor], Never> {
-        connectedSubject.eraseToAnyPublisher()
-    }
-
-    /// Merged display list: discovered peripherals plus any connected entries not already in discovery (by id).
-    public var knownSensorNamesPublisher: AnyPublisher<[String], Never> {
-        Publishers.CombineLatest(discoveredSubject, connectedSubject)
-            .map { discovered, connected in Self.mergedSensorTitles(discovered: discovered, connected: connected) }
-            .eraseToAnyPublisher()
+    public var knownSensors: AnyPublisher<[ConnectedSensor], Never> {
+        knownSensorsSubject.eraseToAnyPublisher()
     }
 
     public func startScan() {
@@ -58,26 +51,53 @@ public final class BluetoothSensorManager: NSObject {
         central.stopScan()
     }
 
-    /// Connects to a peripheral previously seen during scan (or any retained peripheral).
+    /// Restores a known sensor from persistence without connecting (disconnected until user connects or auto-reconnect runs).
+    public func seedKnownSensor(id: UUID, name: String) {
+        guard !knownSensorsSubject.value.contains(where: { $0.id == id }) else { return }
+        updateKnownState(id: id, name: name, state: .disconnected)
+    }
+
+    /// Connects to a peripheral previously seen during scan, retrieved via Core Bluetooth, or seeded from persistence.
     public func connect(to peripheralID: UUID) {
-        guard let peripheral = peripheralsByID[peripheralID] else { return }
         guard central.state == .poweredOn else { return }
-        updateConnectedState(id: peripheralID, name: peripheral.name ?? "Sensor", state: .connecting)
+        guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
+        let name = peripheral.name ?? knownSensorsSubject.value.first(where: { $0.id == peripheralID })?.name ?? "Cycling sensor"
+        updateKnownState(id: peripheralID, name: name, state: .connecting)
         central.connect(peripheral, options: nil)
     }
 
-    private static func mergedSensorTitles(
-        discovered: [DiscoveredSensor],
-        connected: [ConnectedSensor]
-    ) -> [String] {
-        var byID: [UUID: String] = [:]
-        for d in discovered {
-            byID[d.id] = d.name
+    public func disconnect(peripheralID: UUID) {
+        calculatorsByID[peripheralID] = nil
+        guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
+        guard peripheral.state == .connected || peripheral.state == .connecting else { return }
+        central.cancelPeripheralConnection(peripheral)
+    }
+
+    public func forget(peripheralID: UUID) {
+        if let peripheral = resolvePeripheral(peripheralID: peripheralID) {
+            if peripheral.state == .connected || peripheral.state == .connecting {
+                central.cancelPeripheralConnection(peripheral)
+            }
         }
-        for c in connected {
-            byID[c.id] = c.name
+        peripheralsByID[peripheralID] = nil
+        calculatorsByID[peripheralID] = nil
+        removeKnown(id: peripheralID)
+    }
+
+    /// Call after restoring known sensors from persistence if `central` may already be `.poweredOn` before seeding.
+    public func reconnectDisconnectedKnownSensorsIfPoweredOn() {
+        guard central.state == .poweredOn else { return }
+        reconnectKnownDisconnectedSensors(central: central)
+    }
+
+    private func resolvePeripheral(peripheralID: UUID) -> CBPeripheral? {
+        if let existing = peripheralsByID[peripheralID] {
+            return existing
         }
-        return byID.values.sorted()
+        let retrieved = central.retrievePeripherals(withIdentifiers: [peripheralID])
+        guard let peripheral = retrieved.first else { return nil }
+        peripheralsByID[peripheralID] = peripheral
+        return peripheral
     }
 
     private func upsertDiscovered(_ peripheral: CBPeripheral, advertisementData: [String: Any], rssi: NSNumber) {
@@ -97,21 +117,34 @@ public final class BluetoothSensorManager: NSObject {
         discoveredSubject.send(list)
     }
 
-    private func updateConnectedState(id: UUID, name: String, state: ConnectionState) {
-        var list = connectedSubject.value
+    private func updateKnownState(id: UUID, name: String, state: ConnectionState) {
+        var list = knownSensorsSubject.value
         if let idx = list.firstIndex(where: { $0.id == id }) {
             list[idx] = ConnectedSensor(id: id, name: name, connectionState: state)
         } else {
             list.append(ConnectedSensor(id: id, name: name, connectionState: state))
         }
         list.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        connectedSubject.send(list)
+        knownSensorsSubject.send(list)
     }
 
-    private func removeConnected(id: UUID) {
-        var list = connectedSubject.value
+    private func removeKnown(id: UUID) {
+        var list = knownSensorsSubject.value
         list.removeAll { $0.id == id }
-        connectedSubject.send(list)
+        knownSensorsSubject.send(list)
+    }
+
+    private func reconnectKnownDisconnectedSensors(central: CBCentralManager) {
+        let disconnected = knownSensorsSubject.value.filter { $0.connectionState == .disconnected }
+        guard !disconnected.isEmpty else { return }
+        for sensor in disconnected {
+            let retrieved = central.retrievePeripherals(withIdentifiers: [sensor.id])
+            guard let peripheral = retrieved.first else { continue }
+            peripheralsByID[peripheral.identifier] = peripheral
+            let name = peripheral.name ?? sensor.name
+            updateKnownState(id: peripheral.identifier, name: name, state: .connecting)
+            central.connect(peripheral, options: nil)
+        }
     }
 
     private func ensureCalculator(for id: UUID) -> CSCDeltaCalculator {
@@ -136,7 +169,7 @@ public final class BluetoothSensorManager: NSObject {
 extension BluetoothSensorManager: @MainActor CBCentralManagerDelegate {
     public func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state == .poweredOn {
-            // Ready; scan is typically started from UI.
+            reconnectKnownDisconnectedSensors(central: central)
         } else {
             stopScan()
         }
@@ -152,22 +185,25 @@ extension BluetoothSensorManager: @MainActor CBCentralManagerDelegate {
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        peripheralsByID[peripheral.identifier] = peripheral
         peripheral.delegate = self
-        let name = peripheral.name ?? "Cycling sensor"
-        updateConnectedState(id: peripheral.identifier, name: name, state: .connected)
+        let name = peripheral.name ?? knownSensorsSubject.value.first(where: { $0.id == peripheral.identifier })?.name ?? "Cycling sensor"
+        updateKnownState(id: peripheral.identifier, name: name, state: .connected)
         peripheral.discoverServices([cscServiceUUID])
     }
 
     public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        updateConnectedState(
+        let name = peripheral.name ?? knownSensorsSubject.value.first(where: { $0.id == peripheral.identifier })?.name ?? "Cycling sensor"
+        updateKnownState(
             id: peripheral.identifier,
-            name: peripheral.name ?? "Cycling sensor",
+            name: name,
             state: .disconnected
         )
     }
 
     public func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        removeConnected(id: peripheral.identifier)
+        let name = peripheral.name ?? knownSensorsSubject.value.first(where: { $0.id == peripheral.identifier })?.name ?? "Cycling sensor"
+        updateKnownState(id: peripheral.identifier, name: name, state: .disconnected)
         calculatorsByID[peripheral.identifier] = nil
     }
 }

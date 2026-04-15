@@ -123,8 +123,35 @@ public struct SettingsView: View {
                         .buttonStyle(.borderless)
                     }
                 ) {
-                    ForEach(viewModel.knownSensors, id: \.title) { sensor in
-                        Text(sensor.title)
+                    ForEach(viewModel.knownSensors, id: \.sensorID) { sensor in
+                        HStack {
+                            Text(sensor.title)
+                            Spacer()
+                            Text(sensor.connectionState.localizedStatusText)
+                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                viewModel.forgetSensor(id: sensor.sensorID)
+                            } label: {
+                                Label(
+                                    String(localized: "Forget", bundle: .settingsStrings, comment: "Remove a known BLE sensor from the list"),
+                                    systemImage: "trash"
+                                )
+                            }
+                            if sensor.connectionState == .connected || sensor.connectionState == .connecting {
+                                Button {
+                                    viewModel.disconnectSensor(id: sensor.sensorID)
+                                } label: {
+                                    Label(
+                                        String(localized: "Disconnect", bundle: .settingsStrings, comment: "Drop BLE connection but keep sensor known"),
+                                        systemImage: "wifi.slash"
+                                    )
+                                }
+                                .tint(.orange)
+                            }
+                        }
                     }
                 }
             }
