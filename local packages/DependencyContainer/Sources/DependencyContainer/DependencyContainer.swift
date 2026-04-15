@@ -38,6 +38,11 @@ final public class DependencyContainer {
     // Retain AutoPauseService to keep subscriptions active
     private let autoPauseService: AutoPauseService
 
+    /// Retain BLE/GPS metric selectors (release) so subscriptions stay alive.
+    private let speedSelector: PrioritizedMetricSelector<UnitSpeed>?
+    private let cadenceSelector: PrioritizedMetricSelector<UnitFrequency>?
+    private let distanceSelector: PrioritizedMetricSelector<UnitLength>?
+
     /// Shared metric scope for the current ride (auto-pause, future persistence).
     private let currentRide: MetricContext
 
@@ -77,10 +82,20 @@ final public class DependencyContainer {
         )
         distancePublisher = distanceMetric.publisher
             .inUnits(settings.distanceUnits)
+        speedSelector = nil
+        cadenceSelector = nil
+        distanceSelector = nil
         #else
+        let bleManager = settingsDependencies.bluetoothSensorManager
+
+        let bleSpeed = BLEMetricAdaptors.speed(manager: bleManager)
+        let gpsSpeed = GPSMetricAdaptors.speed(service: speedAndDistanceService)
+        let speedSel = PrioritizedMetricSelector(sources: [bleSpeed, gpsSpeed])
+        speedSelector = speedSel
+
         // Raw speed (before unit conversion)
-        let rawSpeed = speedAndDistanceService.speed
-        
+        let rawSpeed = speedSel.publisher
+
         // Auto-pause service
         autoPauseService = AutoPauseService(
             speed: rawSpeed,
@@ -92,10 +107,19 @@ final public class DependencyContainer {
         // Display-converted speed
         speedPublisher = rawSpeed
             .inUnits(settings.speedUnits)
-        cadencePublisher = Empty<Measurement<UnitFrequency>, Never>()
-            .inUnits(Just(.revolutionsPerMinute).eraseToAnyPublisher())
+
+        let bleCadence = BLEMetricAdaptors.cadence(manager: bleManager)
+        let cadSel = PrioritizedMetricSelector(sources: [bleCadence])
+        cadenceSelector = cadSel
+        cadencePublisher = cadSel.publisher
+            .inUnits(Just(.revolutionsPerMinute))
+
+        let bleDist = BLEMetricAdaptors.distanceDelta(manager: bleManager)
+        let gpsDist = GPSMetricAdaptors.distanceDelta(service: speedAndDistanceService)
+        let distSel = PrioritizedMetricSelector(sources: [bleDist, gpsDist])
+        distanceSelector = distSel
         distanceMetric = AccumulatingMetric<UnitLength>(
-            source: speedAndDistanceService.distanceDelta,
+            source: distSel.publisher,
             context: currentRide
         )
         distancePublisher = distanceMetric.publisher

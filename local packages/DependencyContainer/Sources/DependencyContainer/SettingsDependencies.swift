@@ -13,7 +13,7 @@ import SettingsVM
 final class SettingsDependencies {
     private let systemSettings: SystemSettings
     private let sensorSettings: SensorSettings
-    private let bluetoothSensorManager: BluetoothSensorManager
+    let bluetoothSensorManager: BluetoothSensorManager
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {

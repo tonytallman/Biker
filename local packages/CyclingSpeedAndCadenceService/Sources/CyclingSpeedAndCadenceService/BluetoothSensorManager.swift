@@ -16,6 +16,7 @@ public final class BluetoothSensorManager: NSObject {
 
     private let discoveredSubject = CurrentValueSubject<[DiscoveredSensor], Never>([])
     private let knownSensorsSubject = CurrentValueSubject<[ConnectedSensor], Never>([])
+    private let derivedUpdateSubject = PassthroughSubject<CSCDerivedUpdate, Never>()
 
     private var peripheralsByID: [UUID: CBPeripheral] = [:]
     private var calculatorsByID: [UUID: CSCDeltaCalculator] = [:]
@@ -34,6 +35,19 @@ public final class BluetoothSensorManager: NSObject {
 
     public var knownSensors: AnyPublisher<[ConnectedSensor], Never> {
         knownSensorsSubject.eraseToAnyPublisher()
+    }
+
+    /// Merged CSC-derived speed, cadence, and wheel distance deltas from all connected sensors (in arrival order).
+    public var derivedUpdates: AnyPublisher<CSCDerivedUpdate, Never> {
+        derivedUpdateSubject.eraseToAnyPublisher()
+    }
+
+    /// True when at least one known sensor is actively connected (BLE notifications may arrive).
+    public var hasConnectedSensor: AnyPublisher<Bool, Never> {
+        knownSensorsSubject
+            .map { sensors in sensors.contains { $0.connectionState == .connected } }
+            .removeDuplicates()
+            .eraseToAnyPublisher()
     }
 
     public func startScan() {
@@ -160,8 +174,7 @@ public final class BluetoothSensorManager: NSObject {
         let update = calculator.push(measurement)
         calculatorsByID[peripheralID] = calculator
         if let update {
-            _ = update
-            // Phase 2+ will bridge these into dashboard metrics; keep hook for future wiring.
+            derivedUpdateSubject.send(update)
         }
     }
 }
