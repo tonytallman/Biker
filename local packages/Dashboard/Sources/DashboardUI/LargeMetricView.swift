@@ -11,9 +11,9 @@ import DashboardModel
 import DesignSystem
 
 struct LargeMetricView: View {
-    let metric: FormattedMetric
+    let metric: MetricViewModel
 
-    init(metric: FormattedMetric) {
+    init(metric: MetricViewModel) {
         self.metric = metric
     }
     
@@ -33,7 +33,7 @@ struct LargeMetricView: View {
 
 #Preview {
     LargeMetricView(
-        metric: FormattedMetric(title: "Speed", value: "25.5", units: "mph")
+        metric: MetricViewModel(title: "Speed", value: "25.5", units: "mph")
     )
     .padding()
     .background(Color.bikerBackground)
