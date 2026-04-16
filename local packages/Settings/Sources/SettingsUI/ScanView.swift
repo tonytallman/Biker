@@ -6,7 +6,6 @@
 import SwiftUI
 
 import DesignSystem
-import SettingsModel
 import SettingsStrings
 import SettingsVM
 
@@ -93,10 +92,9 @@ struct ScanView: View {
 }
 
 #Preview {
-    let storage = SettingsModel.InMemorySettingsStorage()
     ScanView(
         viewModel: ScanViewModel(
-            sensorSettings: SettingsModel.PreviewSensorSettings()
+            sensorSettings: PreviewSensorSettings()
         )
     )
 }

@@ -23,10 +23,6 @@ let package = Package(
             targets: ["SettingsVM"]
         ),
         .library(
-            name: "SettingsModel",
-            targets: ["SettingsModel"]
-        ),
-        .library(
             name: "SettingsStrings",
             targets: ["SettingsStrings"]
         ),
@@ -35,7 +31,7 @@ let package = Package(
         .package(path: "../DesignSystem"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
+        // Targets are the basic building blocks of a package, defining a module or test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "SettingsStrings",
@@ -43,24 +39,16 @@ let package = Package(
             resources: [.process("Localizable.xcstrings")]
         ),
         .target(
-            name: "SettingsModel",
-            dependencies: ["SettingsStrings"]
-        ),
-        .target(
             name: "SettingsVM",
-            dependencies: ["SettingsModel"]
+            dependencies: ["SettingsStrings"]
         ),
         .target(
             name: "SettingsUI",
             dependencies: ["SettingsVM", "DesignSystem", "SettingsStrings"]
         ),
         .testTarget(
-            name: "SettingsModelTests",
-            dependencies: ["SettingsModel"]
-        ),
-        .testTarget(
             name: "SettingsVMTests",
-            dependencies: ["SettingsVM", "SettingsModel"]
+            dependencies: ["SettingsVM"]
         ),
         .testTarget(
             name: "SettingsUITests",

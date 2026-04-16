@@ -7,18 +7,16 @@ import Combine
 import Foundation
 import Observation
 
-import SettingsModel
-
 @MainActor
 @Observable
 package final class ScanViewModel {
     package var discoveredSensors: [DiscoveredSensorInfo] = []
     package var isScanning: Bool = false
 
-    private let sensorSettings: SensorSettings
+    private let sensorSettings: SettingsViewModel.SensorSettings
     private var cancellables: Set<AnyCancellable> = []
 
-    package init(sensorSettings: SensorSettings) {
+    package init(sensorSettings: SettingsViewModel.SensorSettings) {
         self.sensorSettings = sensorSettings
 
         sensorSettings.discoveredSensors

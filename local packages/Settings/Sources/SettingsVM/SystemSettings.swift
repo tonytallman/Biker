@@ -8,20 +8,10 @@
 import Combine
 import Foundation
 
-@MainActor
-public protocol SystemSettings {
-    var keepScreenOn: any Subject<Bool, Never> { get }
-    var willEnterForeground: AnyPublisher<Void, Never> { get }
-    var locationBackgroundStatus: String { get }
-    var bluetoothBackgroundStatus: String { get }
-    func openPermissions()
-    func setIdleTimerDisabled(_ disabled: Bool)
-}
-
 private let keepScreenOnKey = "keepScreenOn"
 
 @MainActor
-public final class DefaultSystemSettings: SystemSettings {
+public final class DefaultSystemSettings: SettingsViewModel.SystemSettings {
     private let storage: SettingsStorage
     private let bluetoothPermissionsSettings: BluetoothPermissionsSettings
     private let locationPermissionsSettings: LocationPermissionsSettings

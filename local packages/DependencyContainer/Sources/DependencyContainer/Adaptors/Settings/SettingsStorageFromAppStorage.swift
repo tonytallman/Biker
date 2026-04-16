@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import SettingsModel
+import SettingsVM
 
 final package class SettingsStorageFromAppStorage: SettingsStorage {
     private let appStorage: AppStorage

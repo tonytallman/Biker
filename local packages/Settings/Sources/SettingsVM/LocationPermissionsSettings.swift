@@ -15,7 +15,7 @@ package protocol LocationPermissionsSettings {
 
 package struct DefaultLocationPermissionsSettings: LocationPermissionsSettings {
     package init() {}
-    
+
     package var locationBackgroundStatus: String {
         let status = CLLocationManager().authorizationStatus
         switch status {

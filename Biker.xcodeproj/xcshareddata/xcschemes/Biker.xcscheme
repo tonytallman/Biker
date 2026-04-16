@@ -180,18 +180,6 @@
             testExecutionOrdering = "random">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "SettingsModelTests"
-               BuildableName = "SettingsModelTests"
-               BlueprintName = "SettingsModelTests"
-               ReferencedContainer = "container:local packages/Settings">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES"
-            testExecutionOrdering = "random">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "SettingsVMTests"
                BuildableName = "SettingsVMTests"
                BlueprintName = "SettingsVMTests"

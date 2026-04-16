@@ -15,7 +15,7 @@ package protocol BluetoothPermissionsSettings {
 
 package struct DefaultBluetoothPermissionsSettings: BluetoothPermissionsSettings {
     package init() {}
-    
+
     package var bluetoothBackgroundStatus: String {
         let status = CBManager.authorization
         switch status {

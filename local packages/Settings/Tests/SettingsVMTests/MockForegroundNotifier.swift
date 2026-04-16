@@ -1,5 +1,5 @@
 import Combine
-import SettingsModel
+import SettingsVM
 
 final class MockForegroundNotifier: ForegroundNotifier {
     private let subject = PassthroughSubject<Void, Never>()

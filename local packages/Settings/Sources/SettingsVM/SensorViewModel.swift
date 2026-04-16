@@ -7,8 +7,6 @@
 
 import Foundation
 
-import SettingsModel
-
 package struct SensorViewModel: Equatable {
     package let sensorID: UUID
     package let title: String

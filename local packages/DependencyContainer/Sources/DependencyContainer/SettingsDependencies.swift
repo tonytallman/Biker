@@ -6,13 +6,12 @@
 //
 
 import CyclingSpeedAndCadenceService
-import SettingsModel
 import SettingsVM
 
 @MainActor
 final class SettingsDependencies {
-    private let systemSettings: SystemSettings
-    private let sensorSettings: SensorSettings
+    private let systemSettings: SettingsViewModel.SystemSettings
+    private let sensorSettings: SettingsViewModel.SensorSettings
     let bluetoothSensorManager: BluetoothSensorManager
     let metricsSettings: DefaultMetricsSettings
 

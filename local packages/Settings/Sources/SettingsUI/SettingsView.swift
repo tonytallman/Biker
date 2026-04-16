@@ -9,7 +9,6 @@ import SwiftUI
 import Foundation
 
 import DesignSystem
-import SettingsModel
 import SettingsStrings
 import SettingsVM
 
@@ -174,12 +173,12 @@ public struct SettingsView: View {
 }
 
 #Preview {
-    let storage = SettingsModel.InMemorySettingsStorage()
+    let storage = InMemorySettingsStorage()
     SettingsView(
         viewModel: SettingsViewModel(
-            metricsSettings: SettingsModel.DefaultMetricsSettings(storage: storage),
-            systemSettings: SettingsModel.DefaultSystemSettings(storage: storage),
-            sensorSettings: SettingsModel.PreviewSensorSettings(),
+            metricsSettings: DefaultMetricsSettings(storage: storage),
+            systemSettings: DefaultSystemSettings(storage: storage),
+            sensorSettings: PreviewSensorSettings(),
         )
     )
 }

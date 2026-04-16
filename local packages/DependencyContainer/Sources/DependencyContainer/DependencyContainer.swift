@@ -9,11 +9,9 @@ import Combine
 import Foundation
 
 import CoreLogic
-import DashboardModel
 import DashboardVM
 import MainVM
 import MetricsFromCoreLocation
-import SettingsModel
 import SettingsVM
 
 /// Dependency container and composition root for the Biker app. It exposes the root object, ``MainViewModel``, from which all other objects are indirectly accessed.

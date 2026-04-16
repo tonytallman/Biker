@@ -1,6 +1,6 @@
 //
 //  DiscoveredSensorInfo.swift
-//  SettingsModel
+//  SettingsVM
 //
 
 import Foundation

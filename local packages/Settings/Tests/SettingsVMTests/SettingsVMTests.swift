@@ -8,13 +8,12 @@
 import Foundation
 import Testing
 import SettingsVM
-import SettingsModel
 
 @MainActor
 @Suite("SettingsViewModel Tests")
 struct SettingsViewModelTests {
-    let metricsSettings: SettingsModel.DefaultMetricsSettings
-    let systemSettings: SettingsModel.SystemSettings
+    let metricsSettings: DefaultMetricsSettings
+    let systemSettings: SettingsViewModel.SystemSettings
     let mockScreenController: MockScreenController
     let mockLocationPermissions: MockLocationPermissionsSettings
     let mockBluetoothPermissions: MockBluetoothPermissionsSettings
@@ -24,8 +23,8 @@ struct SettingsViewModelTests {
     let viewModel: SettingsVM.SettingsViewModel
     
     init() {
-        let storage = SettingsModel.InMemorySettingsStorage()
-        metricsSettings = SettingsModel.DefaultMetricsSettings(storage: storage)
+        let storage = InMemorySettingsStorage()
+        metricsSettings = DefaultMetricsSettings(storage: storage)
 
         mockScreenController = MockScreenController()
         mockLocationPermissions = MockLocationPermissionsSettings()
@@ -33,7 +32,7 @@ struct SettingsViewModelTests {
         mockSystemSettingsNavigator = MockSystemSettingsNavigator()
         mockForegroundNotifier = MockForegroundNotifier()
         mockSensorSettings = MockSensorSettings()
-        systemSettings = SettingsModel.DefaultSystemSettings(
+        systemSettings = DefaultSystemSettings(
             storage: storage,
             bluetoothPermissionsSettings: mockBluetoothPermissions,
             locationPermissionsSettings: mockLocationPermissions,

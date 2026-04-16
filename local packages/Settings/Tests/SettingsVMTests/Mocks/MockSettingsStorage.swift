@@ -1,12 +1,10 @@
 //
 //  MockSettingsStorage.swift
-//  SettingsModelTests
-//
-//  Created by Tony Tallman on 2/12/26.
+//  SettingsVMTests
 //
 
 import Foundation
-import SettingsModel
+import SettingsVM
 
 final class MockSettingsStorage: SettingsStorage {
     private var storage: [String: Any] = [:]

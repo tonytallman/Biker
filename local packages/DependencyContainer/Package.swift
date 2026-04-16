@@ -37,9 +37,7 @@ let package = Package(
                 "MetricsFromCoreLocation",
                 .product(name: "MainVM", package: "MainView"),
                 .product(name: "SettingsVM", package: "Settings"),
-                .product(name: "SettingsModel", package: "Settings"),
                 .product(name: "DashboardVM", package: "Dashboard"),
-                .product(name: "DashboardModel", package: "Dashboard")
             ],
         ),
         .testTarget(

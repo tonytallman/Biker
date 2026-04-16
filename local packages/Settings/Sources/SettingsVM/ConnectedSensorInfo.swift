@@ -1,6 +1,6 @@
 //
 //  ConnectedSensorInfo.swift
-//  SettingsModel
+//  SettingsVM
 //
 
 import Foundation

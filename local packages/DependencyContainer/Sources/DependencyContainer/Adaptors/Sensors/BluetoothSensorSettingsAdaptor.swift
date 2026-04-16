@@ -6,10 +6,10 @@
 import Combine
 import CyclingSpeedAndCadenceService
 import Foundation
-import SettingsModel
+import SettingsVM
 
 @MainActor
-final class BluetoothSensorSettingsAdaptor: SensorSettings {
+final class BluetoothSensorSettingsAdaptor: SettingsViewModel.SensorSettings {
     private let manager: BluetoothSensorManager
     private let appStorage: AppStorage
     private var cancellables = Set<AnyCancellable>()

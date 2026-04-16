@@ -1,14 +1,12 @@
 //
 //  DimensionCodingTests.swift
-//  SettingsModelTests
-//
-//  Created by Tony Tallman on 2/12/26.
+//  SettingsVMTests
 //
 
 import Foundation
 import Testing
 
-import SettingsModel
+import SettingsVM
 
 @Suite("SpeedUnitKey Tests")
 struct SpeedUnitKeyTests {

@@ -8,10 +8,10 @@
 import Combine
 import Foundation
 
-import SettingsModel
+import SettingsVM
 
 @MainActor
-final class MockSensorSettings: SensorSettings {
+final class MockSensorSettings: SettingsViewModel.SensorSettings {
     private let sensorsSubject = CurrentValueSubject<[ConnectedSensorInfo], Never>([])
     private let discoveredSensorsSubject = CurrentValueSubject<[DiscoveredSensorInfo], Never>([])
 

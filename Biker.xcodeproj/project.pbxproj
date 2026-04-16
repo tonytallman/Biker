@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		69206DA72D3EDAFC00408EF5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 69206DA62D3EDAFC00408EF5 /* README.md */; };
 		EA16D37B2E32AF7B00A2FFB7 /* DependencyContainer in Frameworks */ = {isa = PBXBuildFile; productRef = EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */; };
-		EA6B24C22EECB22F00CF5714 /* SettingsModel in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C12EECB22F00CF5714 /* SettingsModel */; };
 		EA6B24C42EECB22F00CF5714 /* SettingsUI in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C32EECB22F00CF5714 /* SettingsUI */; };
 		EA6B24C62EECB22F00CF5714 /* SettingsVM in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C52EECB22F00CF5714 /* SettingsVM */; };
 		EA6B24CA2EECB23300CF5718 /* DashboardModel in Frameworks */ = {isa = PBXBuildFile; productRef = EA6B24C72EECB23000CF5715 /* DashboardModel */; };
@@ -94,7 +93,6 @@
 				EAA821AD2ED2AA0E00E5132F /* CoreLogic in Frameworks */,
 				EAA821AC2ED2AA0E00E5132F /* (null) in Frameworks */,
 				EA75F8542EECB6B400867FE2 /* DesignSystem in Frameworks */,
-				EA6B24C22EECB22F00CF5714 /* SettingsModel in Frameworks */,
 				EA6B24C42EECB22F00CF5714 /* SettingsUI in Frameworks */,
 				EA6B24C62EECB22F00CF5714 /* SettingsVM in Frameworks */,
 				EA6B24CA2EECB23300CF5718 /* DashboardModel in Frameworks */,
@@ -191,7 +189,6 @@
 				EA16D3692E32AF6A00A2FFB6 /* CoreLogic */,
 				EA7C87DD2EEAFCC800D73985 /* MainUI */,
 				EA7C87DF2EEAFCCA00D73987 /* MainVM */,
-				EA6B24C12EECB22F00CF5714 /* SettingsModel */,
 				EA6B24C32EECB22F00CF5714 /* SettingsUI */,
 				EA6B24C52EECB22F00CF5714 /* SettingsVM */,
 				EA6B24C72EECB23000CF5715 /* DashboardModel */,
@@ -664,10 +661,6 @@
 		EA16D37A2E32AF7B00A2FFB7 /* DependencyContainer */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DependencyContainer;
-		};
-		EA6B24C12EECB22F00CF5714 /* SettingsModel */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = SettingsModel;
 		};
 		EA6B24C32EECB22F00CF5714 /* SettingsUI */ = {
 			isa = XCSwiftPackageProductDependency;

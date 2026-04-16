@@ -5,7 +5,7 @@
 //  Created by Tony Tallman on 2/9/26.
 //
 
-import SettingsModel
+import SettingsVM
 
 @MainActor
 final class MockScreenController: ScreenController {

@@ -5,7 +5,7 @@
 //  Created by Tony Tallman on 2/9/26.
 //
 
-import SettingsModel
+import SettingsVM
 
 final class MockBluetoothPermissionsSettings: BluetoothPermissionsSettings {
     var bluetoothBackgroundStatus: String = "Not Determined"

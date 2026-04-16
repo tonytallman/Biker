@@ -1,15 +1,13 @@
 //
-//  SettingsModelTests.swift
-//  SettingsModelTests
-//
-//  Created by Tony Tallman on 1/20/25.
+//  SettingsPersistenceTests.swift
+//  SettingsVMTests
 //
 
 import Combine
 import Foundation
 import Testing
 
-import SettingsModel
+import SettingsVM
 
 @Suite("InMemorySettingsStorage Tests")
 struct InMemorySettingsStorageTests {

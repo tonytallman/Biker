@@ -8,13 +8,7 @@
 import Combine
 import Foundation
 
-public protocol MetricsSettings {
-    var speedUnits: any Subject<UnitSpeed, Never> { get }
-    var distanceUnits: any Subject<UnitLength, Never> { get }
-    var autoPauseThreshold: any Subject<Measurement<UnitSpeed>, Never> { get }
-}
-
-public class DefaultMetricsSettings: MetricsSettings {
+public class DefaultMetricsSettings: SettingsViewModel.MetricsSettings {
     private let storage: SettingsStorage
     private var cancellables: Set<AnyCancellable> = []
 

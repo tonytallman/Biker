@@ -5,7 +5,7 @@
 //  Created by Tony Tallman on 2/11/26.
 //
 
-import SettingsModel
+import SettingsVM
 
 final class MockSystemSettingsNavigator: SystemSettingsNavigator {
     var openPermissionsCallCount = 0

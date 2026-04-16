@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import SettingsModel
 
 package protocol AppStorage {
     func get(forKey key: String) -> Any?

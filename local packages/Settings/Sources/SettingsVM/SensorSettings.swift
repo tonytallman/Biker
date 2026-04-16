@@ -9,18 +9,7 @@ import Combine
 import Foundation
 
 @MainActor
-public protocol SensorSettings {
-    var sensors: AnyPublisher<[ConnectedSensorInfo], Never> { get }
-    var discoveredSensors: AnyPublisher<[DiscoveredSensorInfo], Never> { get }
-    func scan()
-    func stopScan()
-    func connect(sensorID: UUID)
-    func disconnect(sensorID: UUID)
-    func forget(sensorID: UUID)
-}
-
-@MainActor
-public struct PreviewSensorSettings: SensorSettings {
+public struct PreviewSensorSettings: SettingsViewModel.SensorSettings {
     public let sensors: AnyPublisher<[ConnectedSensorInfo], Never>
     public let discoveredSensors: AnyPublisher<[DiscoveredSensorInfo], Never>
 
