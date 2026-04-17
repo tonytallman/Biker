@@ -1,0 +1,28 @@
+---
+description: Enforces independence between local Swift packages.
+globs: local packages/**/Package.swift
+alwaysApply: false
+---
+
+# Local Package Independence
+
+Local packages must not depend on other local packages, with the following exceptions.
+
+## Allowed Dependencies
+
+1. **DependencyContainer** may depend on any local package.
+2. **View packages** (created from `templates/Package.view.swift`) may depend on **DesignSystem**.
+3. **View packages** may depend on other **view packages**.
+
+All other cross-package dependencies are prohibited. Logic packages (created from `templates/Package.logic.swift`) must remain fully independent of every other local package.
+
+## Decoupling
+
+When a capability must cross package boundaries without adding an allowed `Package.swift` dependency, define the abstraction (for example a protocol shaped for the consumer’s needs) in the **consumer** package, keep concrete types in the **provider** package, and connect them in **DependencyContainer** or the **Biker** app.
+
+For the step-by-step workflow, read and follow [.cursor/skills/local-package-decoupling/SKILL.md](.cursor/skills/local-package-decoupling/SKILL.md).
+
+## Current Packages for Reference
+
+View packages: Dashboard, Settings, MainView
+Logic packages: CoreLogic, MetricsFromCoreLocation, CyclingSpeedAndCadenceService, DesignSystem

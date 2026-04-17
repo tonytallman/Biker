@@ -19,7 +19,6 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../MetricsFromCoreLocation"),
         .package(url: "https://github.com/pointfreeco/combine-schedulers", from: "1.0.0"),
     ],
     targets: [
@@ -28,7 +27,6 @@ let package = Package(
         .target(
             name: "CoreLogic",
             dependencies: [
-                "MetricsFromCoreLocation",
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
             ]
         ),
