@@ -1,8 +1,8 @@
 ---
 name: local-package-decoupling
 description: >-
-  Decouples local Swift packages by defining abstractions in the consumer and
-  wiring concrete types in DependencyContainer or the Biker app. Use when adding
+  Decouples local Swift packages by defining abstractions in the consuming module
+  and wiring concrete types in DependencyContainer or the Biker app. Use when adding
   cross-package behavior without a new Package.swift path dependency, removing a
   forbidden local dependency, refactoring toward package independence, or when
   the user mentions protocols, adapters, or composition root.
@@ -10,29 +10,19 @@ description: >-
 
 # Local package decoupling
 
-Follow this workflow when two local packages need to interact but [package-independence.mdc](.cursor/rules/package-independence.mdc) forbids (or you want to avoid) a direct SPM dependency between them.
+Use when two local packages must interact but [.cursor/rules/package-independence.mdc](.cursor/rules/package-independence.mdc) forbids (or you want to avoid) a direct SPM dependency. Policy and exceptions are only in that rule.
 
-Policy details and allowed exceptions live only in that rule; do not bypass them here.
+## Checklist
 
-## Workflow
+1. **Consumer** — Pick the **narrowest** consuming target/module (e.g. `MainVM`, not the whole package if only one target needs the capability).
+2. **Abstraction** — Define a minimal protocol or type-erased surface **in that module**; shape it for call sites there, not the provider’s internals.
+3. **Provider** — Keep concrete types in the provider **module** that already owns them.
+4. **Composition root** — Implement the abstraction in **DependencyContainer** (preferred) or the **Biker** app; register instances/factories/environment so only the abstraction crosses the boundary.
+5. **Imports** — The consuming target must not `import` the provider module without a package dependency; adapters may import both.
+6. **Do not** add forbidden `path:` dependencies to work around visibility.
+7. **Tests** — Mock the abstraction in consumer tests; exercise real wiring in DependencyContainer or app tests if present.
 
-1. **Identify the consumer** — the module that needs a capability (types, publishers, services) owned by another local package.
+## Swift notes
 
-2. **Define a minimal abstraction in the consumer** — usually a `protocol` (or a small struct enum / closure type) that describes only what the consumer needs. Name and shape it to match how the consumer uses the dependency, not the provider’s internal API.
-
-3. **Keep provider types in the provider package** — concrete types, frameworks, and vendor-specific code stay in the package that already owns them.
-
-4. **Wire at the composition root** — implement the protocol with a concrete type or adapter in **DependencyContainer** (preferred for this repo) or the **Biker** app target. Register instances, factories, or environment values there so the consumer receives the abstraction only.
-
-5. **Avoid leaking imports** — the consumer target must not `import` the provider module if there is no package dependency. The adapter in DependencyContainer may import both sides.
-
-## Testing
-
-- Consumer unit tests: depend on the protocol; use a test double or mock implementation in the test target.
-- Integration of real behavior: exercise the adapter in DependencyContainer tests or app-level tests if you have them.
-
-## Swift-oriented notes
-
-- Prefer narrow protocols over “pass the whole” concrete service type.
-- If the consumer needs only one function or publisher, a struct holding a closure or `AnyPublisher` might be enough instead of a formal protocol.
-- When Swift access control blocks visibility across modules without a dependency, the abstraction in the consumer is the supported boundary; do not widen `public` on provider types just to satisfy the consumer.
+- Prefer small protocols or a struct of closures / `AnyPublisher` over exposing whole services.
+- Do not widen `public` on provider types to hack around missing dependencies; fix the boundary instead.

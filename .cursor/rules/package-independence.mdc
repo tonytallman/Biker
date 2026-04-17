@@ -18,11 +18,6 @@ All other cross-package dependencies are prohibited. Logic packages (created fro
 
 ## Decoupling
 
-When a capability must cross package boundaries without adding an allowed `Package.swift` dependency, define the abstraction (for example a protocol shaped for the consumer’s needs) in the **consumer** package, keep concrete types in the **provider** package, and connect them in **DependencyContainer** or the **Biker** app.
+When a capability must cross package boundaries without adding an allowed `Package.swift` dependency, define the abstraction (for example a protocol shaped for the consumer’s needs) in the **consuming module**, keep concrete types in the **provider module**, and connect them in **DependencyContainer** or the **Biker** app.
 
 For the step-by-step workflow, read and follow [.cursor/skills/local-package-decoupling/SKILL.md](.cursor/skills/local-package-decoupling/SKILL.md).
-
-## Current Packages for Reference
-
-View packages: Dashboard, Settings, MainView
-Logic packages: CoreLogic, MetricsFromCoreLocation, CyclingSpeedAndCadenceService, DesignSystem
