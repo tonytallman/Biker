@@ -1,0 +1,16 @@
+---
+description: Suggests recording an Architecture Decision Record when a prompt implies a significant design choice.
+alwaysApply: true
+---
+
+# Recommend ADR on architectural prompts
+
+When the user’s message (or ongoing thread) clearly involves **a new or changed architectural decision**—for example choosing between patterns, libraries, module boundaries, persistence, concurrency, error-handling strategy, or explicitly rejecting an alternative—**propose adding or updating an ADR** before or alongside implementation.
+
+**Do this:**
+
+1. Briefly name the decision and why it matters.
+2. Ask whether they want it captured as an ADR (if they have not already asked).
+3. If yes or implied, follow [adr-decision-entry/SKILL.md](../skills/adr-decision-entry/SKILL.md) for filename, template, status, and location under `docs/adr/`.
+
+**Do not** push an ADR for minor edits, naming-only changes, or routine bug fixes with no design trade-off.
