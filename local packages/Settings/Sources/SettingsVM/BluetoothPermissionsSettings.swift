@@ -17,18 +17,17 @@ package struct DefaultBluetoothPermissionsSettings: BluetoothPermissionsSettings
     package init() {}
 
     package var bluetoothBackgroundStatus: String {
-        let status = CBManager.authorization
-        switch status {
+        switch CBManager.authorization {
         case .allowedAlways:
-            return String(localized: "Allowed", bundle: .settingsStrings, comment: "Bluetooth permission status: user allowed background use")
+            String(localized: "Allowed", bundle: .settingsStrings, comment: "Bluetooth permission status: user allowed background use")
         case .denied:
-            return String(localized: "Denied", bundle: .settingsStrings, comment: "Bluetooth permission status: user denied")
+            String(localized: "Denied", bundle: .settingsStrings, comment: "Bluetooth permission status: user denied")
         case .restricted:
-            return String(localized: "Restricted", bundle: .settingsStrings, comment: "Bluetooth permission status: restricted by parental controls or device policy")
+            String(localized: "Restricted", bundle: .settingsStrings, comment: "Bluetooth permission status: restricted by parental controls or device policy")
         case .notDetermined:
-            return String(localized: "Not Determined", bundle: .settingsStrings, comment: "Bluetooth permission status: user has not been asked yet")
+            String(localized: "Not Determined", bundle: .settingsStrings, comment: "Bluetooth permission status: user has not been asked yet")
         @unknown default:
-            return String(localized: "Unknown", bundle: .settingsStrings, comment: "Bluetooth permission status: unknown or future case")
+            String(localized: "Unknown", bundle: .settingsStrings, comment: "Bluetooth permission status: unknown or future case")
         }
     }
 }

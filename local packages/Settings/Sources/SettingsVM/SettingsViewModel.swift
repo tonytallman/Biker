@@ -16,8 +16,9 @@ open class SettingsViewModel {
 
     private let metricsSettings: SettingsViewModel.MetricsSettings
     private let systemSettings: SettingsViewModel.SystemSettings
-    private let sensorSettings: SettingsViewModel.SensorSettings
+    private let sensorProvider: any SensorProvider
     private var cancellables: Set<AnyCancellable> = []
+    private var knownSensorViewModels: [UUID: SensorViewModel] = [:]
 
     package var currentSpeedUnits: UnitSpeed = .milesPerHour
     package var currentDistanceUnits: UnitLength = .miles
@@ -34,11 +35,11 @@ open class SettingsViewModel {
     public init(
         metricsSettings: SettingsViewModel.MetricsSettings,
         systemSettings: SettingsViewModel.SystemSettings,
-        sensorSettings: SettingsViewModel.SensorSettings,
+        sensorProvider: any SensorProvider
     ) {
         self.metricsSettings = metricsSettings
         self.systemSettings = systemSettings
-        self.sensorSettings = sensorSettings
+        self.sensorProvider = sensorProvider
 
         // Subscribe to settings changes
         metricsSettings.speedUnits
@@ -81,14 +82,32 @@ open class SettingsViewModel {
         // Initial refresh of background statuses
         refreshBackgroundStatuses()
 
-        sensorSettings.sensors
+        sensorProvider.knownSensors
             .sink { [weak self] sensors in
-                guard let self else { return }
-                self.knownSensors = sensors.map {
-                    SensorViewModel(sensorID: $0.id, title: $0.name, connectionState: $0.connectionState)
-                }
+                self?.reconcileKnownSensors(sensors)
             }
             .store(in: &cancellables)
+    }
+
+    private func reconcileKnownSensors(_ sensors: [any Sensor]) {
+        var seen = Set<UUID>()
+        var ordered: [SensorViewModel] = []
+        for sensor in sensors {
+            let id = sensor.id
+            seen.insert(id)
+            if let existing = knownSensorViewModels[id] {
+                existing.replaceSensorIfNeeded(sensor)
+                ordered.append(existing)
+            } else {
+                let vm = SensorViewModel(sensor: sensor)
+                knownSensorViewModels[id] = vm
+                ordered.append(vm)
+            }
+        }
+        for id in knownSensorViewModels.keys where !seen.contains(id) {
+            knownSensorViewModels.removeValue(forKey: id)
+        }
+        knownSensors = ordered
     }
 
     package func setSpeedUnits(_ units: UnitSpeed) {
@@ -121,19 +140,19 @@ open class SettingsViewModel {
     }
 
     package func scanForSensors() {
-        sensorSettings.scan()
+        sensorProvider.scan()
     }
 
     package func makeScanViewModel() -> ScanViewModel {
-        ScanViewModel(sensorSettings: sensorSettings)
+        ScanViewModel(sensorProvider: sensorProvider)
     }
 
     package func disconnectSensor(id: UUID) {
-        sensorSettings.disconnect(sensorID: id)
+        knownSensorViewModels[id]?.disconnect()
     }
 
     package func forgetSensor(id: UUID) {
-        sensorSettings.forget(sensorID: id)
+        knownSensorViewModels[id]?.forget()
     }
 }
 
@@ -152,16 +171,5 @@ extension SettingsViewModel {
         var bluetoothBackgroundStatus: String { get }
         func openPermissions()
         func setIdleTimerDisabled(_ disabled: Bool)
-    }
-
-    @MainActor
-    public protocol SensorSettings {
-        var sensors: AnyPublisher<[ConnectedSensorInfo], Never> { get }
-        var discoveredSensors: AnyPublisher<[DiscoveredSensorInfo], Never> { get }
-        func scan()
-        func stopScan()
-        func connect(sensorID: UUID)
-        func disconnect(sensorID: UUID)
-        func forget(sensorID: UUID)
     }
 }

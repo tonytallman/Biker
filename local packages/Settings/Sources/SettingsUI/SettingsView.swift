@@ -178,7 +178,7 @@ public struct SettingsView: View {
         viewModel: SettingsViewModel(
             metricsSettings: DefaultMetricsSettings(storage: storage),
             systemSettings: DefaultSystemSettings(storage: storage),
-            sensorSettings: PreviewSensorSettings(),
+            sensorProvider: PreviewSensorProvider(),
         )
     )
 }

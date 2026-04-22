@@ -10,35 +10,45 @@ import Observation
 @MainActor
 @Observable
 package final class ScanViewModel {
-    package var discoveredSensors: [DiscoveredSensorInfo] = []
+    package var discoveredSensors: [DiscoveredSensorRowViewModel] = []
     package var isScanning: Bool = false
 
-    private let sensorSettings: SettingsViewModel.SensorSettings
+    private let sensorProvider: any SensorProvider
     private var cancellables: Set<AnyCancellable> = []
 
-    package init(sensorSettings: SettingsViewModel.SensorSettings) {
-        self.sensorSettings = sensorSettings
+    package init(sensorProvider: any SensorProvider) {
+        self.sensorProvider = sensorProvider
 
-        sensorSettings.discoveredSensors
-            .receive(on: DispatchQueue.main)
+        // Avoid `receive(on:)` so `@MainActor` + `CurrentValueSubject` from tests and the provider
+        // can update rows synchronously; `SensorProvider` is main-actor-only.
+        sensorProvider.discoveredSensors
             .sink { [weak self] sensors in
-                self?.discoveredSensors = sensors
+                self?.rebuildRows(from: sensors)
             }
             .store(in: &cancellables)
     }
 
+    private func rebuildRows(from sensors: [any Sensor]) {
+        let sorted = sensors.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        discoveredSensors = sorted.map { DiscoveredSensorRowViewModel(sensor: $0) }
+    }
+
     package func startScan() {
         isScanning = true
-        sensorSettings.scan()
+        sensorProvider.scan()
     }
 
     package func stopScan() {
         isScanning = false
-        sensorSettings.stopScan()
+        sensorProvider.stopScan()
     }
 
     package func connect(sensorID: UUID) {
-        sensorSettings.connect(sensorID: sensorID)
+        if let row = discoveredSensors.first(where: { $0.id == sensorID }) {
+            row.connect()
+        }
         stopScan()
     }
 }

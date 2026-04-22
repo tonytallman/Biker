@@ -11,7 +11,7 @@ import SettingsVM
 @MainActor
 final class SettingsDependencies {
     private let systemSettings: SettingsViewModel.SystemSettings
-    private let sensorSettings: SettingsViewModel.SensorSettings
+    private let sensorProvider: any SensorProvider
     let bluetoothSensorManager: BluetoothSensorManager
     let metricsSettings: DefaultMetricsSettings
 
@@ -22,9 +22,9 @@ final class SettingsDependencies {
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
         let bluetoothSensorManager = BluetoothSensorManager()
         self.bluetoothSensorManager = bluetoothSensorManager
-        sensorSettings = BluetoothSensorSettingsAdaptor(
+        sensorProvider = BluetoothSensorProviderAdapter(
             manager: bluetoothSensorManager,
-            appStorage: namespacedAppStorage
+            appStorage: namespacedAppStorage,
         )
     }
     
@@ -32,7 +32,7 @@ final class SettingsDependencies {
         SettingsVM.SettingsViewModel(
             metricsSettings: metricsSettings,
             systemSettings: systemSettings,
-            sensorSettings: sensorSettings,
+            sensorProvider: sensorProvider,
         )
     }
 }

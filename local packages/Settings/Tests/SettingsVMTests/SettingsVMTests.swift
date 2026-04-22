@@ -19,7 +19,7 @@ struct SettingsViewModelTests {
     let mockBluetoothPermissions: MockBluetoothPermissionsSettings
     let mockSystemSettingsNavigator: MockSystemSettingsNavigator
     let mockForegroundNotifier: MockForegroundNotifier
-    let mockSensorSettings: MockSensorSettings
+    let mockSensorProvider: MockSensorProvider
     let viewModel: SettingsVM.SettingsViewModel
     
     init() {
@@ -31,7 +31,7 @@ struct SettingsViewModelTests {
         mockBluetoothPermissions = MockBluetoothPermissionsSettings()
         mockSystemSettingsNavigator = MockSystemSettingsNavigator()
         mockForegroundNotifier = MockForegroundNotifier()
-        mockSensorSettings = MockSensorSettings()
+        mockSensorProvider = MockSensorProvider()
         systemSettings = DefaultSystemSettings(
             storage: storage,
             bluetoothPermissionsSettings: mockBluetoothPermissions,
@@ -44,7 +44,7 @@ struct SettingsViewModelTests {
         viewModel = SettingsVM.SettingsViewModel(
             metricsSettings: metricsSettings,
             systemSettings: systemSettings,
-            sensorSettings: mockSensorSettings,
+            sensorProvider: mockSensorProvider,
         )
     }
     
@@ -134,16 +134,22 @@ struct SettingsViewModelTests {
         #expect(viewModel.knownSensors.isEmpty)
     }
 
-    @Test("Scan for sensors is a no-op")
-    func testScanForSensorsIsANoOp() {
+    @Test("Scan for sensors does not change known sensor list")
+    func testScanForSensorsDoesNotChangeKnownList() {
         let id = UUID()
-        viewModel.knownSensors = [
-            SensorViewModel(sensorID: id, title: "Speed Sensor", connectionState: .disconnected),
-        ]
+        let sensor: any Sensor = MockPlainSensor(
+            id: id,
+            name: "Speed Sensor",
+            type: .cyclingSpeedAndCadence,
+            connectionState: .disconnected
+        )
+        mockSensorProvider.setKnownSensors([sensor])
+        #expect(viewModel.knownSensors.map(\.title) == ["Speed Sensor"])
 
         viewModel.scanForSensors()
 
         #expect(viewModel.knownSensors.map(\.title) == ["Speed Sensor"])
+        #expect(mockSensorProvider.scanCallCount == 1)
     }
     
     @Test("Open location permissions delegates to location permissions settings")

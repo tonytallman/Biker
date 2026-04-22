@@ -297,6 +297,39 @@
           }
         }
       }
+    },
+    "SensorType.CyclingSpeedAndCadence" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cycling speed and cadence"
+          }
+        }
+      }
+    },
+    "SensorType.FitnessMachine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fitness machine"
+          }
+        }
+      }
+    },
+    "SensorType.HeartRate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heart rate"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

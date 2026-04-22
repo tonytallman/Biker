@@ -34,19 +34,21 @@ struct ScanView: View {
                         }
                     }
                 } else {
-                    List(viewModel.discoveredSensors) { sensor in
+                    List(viewModel.discoveredSensors) { row in
                         Button {
-                            viewModel.connect(sensorID: sensor.id)
+                            viewModel.connect(sensorID: row.id)
                             dismiss()
                         } label: {
                             HStack {
-                                Text(sensor.name)
+                                Text(row.name)
                                 Spacer()
-                                Image(systemName: Self.rssiSymbol(rssi: sensor.rssi))
-                                    .foregroundStyle(.secondary)
-                                    .accessibilityLabel(
-                                        String(localized: "Signal strength", bundle: .settingsStrings, comment: "Accessibility label for RSSI icon")
-                                    )
+                                if let rssi = row.rssi {
+                                    Image(systemName: Self.rssiSymbol(rssi: rssi))
+                                        .foregroundStyle(.secondary)
+                                        .accessibilityLabel(
+                                            String(localized: "Signal strength", bundle: .settingsStrings, comment: "Accessibility label for RSSI icon")
+                                        )
+                                }
                             }
                         }
                     }
@@ -94,7 +96,7 @@ struct ScanView: View {
 #Preview {
     ScanView(
         viewModel: ScanViewModel(
-            sensorSettings: PreviewSensorSettings()
+            sensorProvider: PreviewSensorProvider()
         )
     )
 }
