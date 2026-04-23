@@ -143,6 +143,12 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
         resetDerivedState()
     }
 
+    /// When Bluetooth is unavailable (permission, power, reset), the UI and metrics must show disconnected
+    /// without a peripheral disconnect callback (SEN-PERM-2 / SEN-PERS-4).
+    public func markDisconnectedByBluetoothUnavailability() {
+        didDisconnect()
+    }
+
     /// Called when the user requests disconnect, before the central cancels the connection (matches legacy pre-clear of calculator).
     public func resetDerivedState() {
         calculator.reset()

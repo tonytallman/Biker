@@ -7,11 +7,11 @@
 import Combine
 import Foundation
 
-/// Owns `CBCentralManager`, CSC scan, connect, and a registry of
+/// Owns a `CBCentralManager` (or test double) through `CSCCentralManaging`, CSC scan, connect, and a registry of
 /// per-peripheral `CyclingSpeedAndCadenceSensor` instances (CSC service/delegate and delta state).
 @MainActor
 public final class CyclingSpeedAndCadenceSensorManager: NSObject {
-    private let central: CBCentralManager
+    private let central: any CSCCentralManaging
     private let cscServiceUUID: CBUUID
     private let store: CSCKnownSensorStore
 
@@ -19,20 +19,50 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     private let knownSensorsSubject = CurrentValueSubject<[ConnectedSensor], Never>([])
     private let derivedUpdateSubject = PassthroughSubject<CSCDerivedUpdate, Never>()
     private let sensorsListSubject = CurrentValueSubject<[CyclingSpeedAndCadenceSensor], Never>([])
+    private let availabilitySubject: CurrentValueSubject<CSCBluetoothAvailability, Never>
 
     private var sensorsByID: [UUID: CyclingSpeedAndCadenceSensor] = [:]
-    private var peripheralsByID: [UUID: CBPeripheral] = [:]
+    private var peripheralsByID: [UUID: any CSCPeripheral] = [:]
     private var mergeCancellable: AnyCancellable?
     private var storeValueCancellables = Set<AnyCancellable>()
 
+    /// Convenience: production central on the main queue.
     public init(persistence: any CSCKnownSensorPersistence) {
         self.cscServiceUUID = CBUUID(string: "1816")
-        self.central = CBCentralManager(delegate: nil, queue: .main)
+        let core = CBCentralManager(delegate: nil, queue: .main)
+        self.central = RealCSCCentral(core: core)
         self.store = CSCKnownSensorStore(persistence: persistence)
+        self.availabilitySubject = CurrentValueSubject(
+            CSCBluetoothAvailabilityReducer.reduce(authorization: type(of: core).authorization, state: core.state)
+        )
         super.init()
-        self.central.delegate = self
+        if let c = (self.central as? RealCSCCentral)?.core {
+            c.delegate = self
+        } else {
+            assertionFailure("Expected RealCSCCentral in production init")
+        }
         for record in self.store.loadAll() {
             installSensorFromLoadedRecord(record)
+        }
+        rebindDerivedMerge()
+        rebindStoreSubscriptions()
+        rebuildAndPublish()
+    }
+
+    /// Designated: inject a `CSCCentralManaging` (e.g. `FakeCSCCentral` in tests).
+    public init(persistence: any CSCKnownSensorPersistence, central: any CSCCentralManaging) {
+        self.cscServiceUUID = CBUUID(string: "1816")
+        self.central = central
+        self.store = CSCKnownSensorStore(persistence: persistence)
+        self.availabilitySubject = CurrentValueSubject(
+            CSCBluetoothAvailabilityReducer.reduce(authorization: central.authorization, state: central.state)
+        )
+        super.init()
+        for record in self.store.loadAll() {
+            installSensorFromLoadedRecord(record)
+        }
+        if let c = (self.central as? RealCSCCentral)?.core {
+            c.delegate = self
         }
         rebindDerivedMerge()
         rebindStoreSubscriptions()
@@ -65,6 +95,12 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         sensorsListSubject.eraseToAnyPublisher()
     }
 
+    public var bluetoothAvailability: AnyPublisher<CSCBluetoothAvailability, Never> {
+        availabilitySubject
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+    }
+
     // MARK: - Public bridge for the composition root
 
     public func cscSensor(for id: UUID) -> CyclingSpeedAndCadenceSensor? {
@@ -82,7 +118,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     public func startScan() {
         discoveredSubject.send([])
 
-        guard central.state == .poweredOn else { return }
+        guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
 
         central.scanForPeripherals(
             withServices: [cscServiceUUID],
@@ -96,7 +132,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
 
     /// Connects to a peripheral previously seen during scan, retrieved via Core Bluetooth, or known from the store.
     public func connect(to peripheralID: UUID) {
-        guard central.state == .poweredOn else { return }
+        guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
         guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
         let name = peripheral.name
             ?? knownSensorsSubject.value.first(where: { $0.id == peripheralID })?.name
@@ -136,10 +172,41 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         rebuildAndPublish()
     }
 
-    /// Call after restoring known sensors from persistence if `central` may already be `.poweredOn` before seeding.
+    /// Call after restoring known sensors from persistence if `central` may already be `.poweredOn` before the first delegate callback.
     public func reconnectDisconnectedKnownSensorsIfPoweredOn() {
-        guard central.state == .poweredOn else { return }
-        reconnectKnownDisconnectedSensors(central: central)
+        guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
+        reconnectKnownDisconnectedSensors()
+        rebuildAndPublish()
+    }
+
+    // MARK: - Bluetooth state (tests + `CBCentralManagerDelegate`)
+
+    /// Recomputes `bluetoothAvailability` and applies scan / disconnect / auto-reconnect policy (SEN-PERM-2, SEN-PERS-3/4/5).
+    internal func handleBluetoothStateChange() {
+        let newAvailability = CSCBluetoothAvailabilityReducer.reduce(
+            authorization: central.authorization,
+            state: central.state
+        )
+        let previous = availabilitySubject.value
+        if newAvailability != previous {
+            availabilitySubject.send(newAvailability)
+        }
+
+        if newAvailability != .poweredOn {
+            stopScan()
+            discoveredSubject.send([])
+            markAllKnownSensorsDisconnectedByPolicy()
+            rebuildAndPublish()
+        } else if previous != .poweredOn {
+            reconnectKnownDisconnectedSensors()
+            rebuildAndPublish()
+        }
+    }
+
+    private func markAllKnownSensorsDisconnectedByPolicy() {
+        for s in sensorsByID.values {
+            s.markDisconnectedByBluetoothUnavailability()
+        }
     }
 
     // MARK: - Internals
@@ -171,7 +238,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         }
     }
 
-    private func resolvePeripheral(peripheralID: UUID) -> CBPeripheral? {
+    private func resolvePeripheral(peripheralID: UUID) -> (any CSCPeripheral)? {
         if let existing = peripheralsByID[peripheralID] {
             return existing
         }
@@ -258,10 +325,13 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         }
     }
 
-    private func reconnectKnownDisconnectedSensors(central: CBCentralManager) {
-        let disconnected = knownSensorsSubject.value.filter { $0.connectionState == .disconnected }
-        guard !disconnected.isEmpty else { return }
-        for known in disconnected {
+    private func reconnectKnownDisconnectedSensors() {
+        let known = knownSensorsSubject.value
+        let toReconnect = known.filter { k in
+            k.connectionState == .disconnected && (sensorsByID[k.id]?.isEnabledValue ?? true)
+        }
+        guard !toReconnect.isEmpty else { return }
+        for known in toReconnect {
             let retrieved = central.retrievePeripherals(withIdentifiers: [known.id])
             guard let peripheral = retrieved.first else { continue }
             peripheralsByID[peripheral.identifier] = peripheral
@@ -272,21 +342,16 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
             csc.willEnterConnecting()
             central.connect(peripheral, options: nil)
         }
-        rebuildAndPublish()
     }
 }
 
 extension CyclingSpeedAndCadenceSensorManager: @MainActor CBCentralManagerDelegate {
-    public func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        if central.state == .poweredOn {
-            reconnectKnownDisconnectedSensors(central: central)
-        } else {
-            stopScan()
-        }
+    public func centralManagerDidUpdateState(_: CBCentralManager) {
+        handleBluetoothStateChange()
     }
 
     public func centralManager(
-        _ central: CBCentralManager,
+        _: CBCentralManager,
         didDiscover peripheral: CBPeripheral,
         advertisementData: [String: Any],
         rssi RSSI: NSNumber
@@ -294,7 +359,7 @@ extension CyclingSpeedAndCadenceSensorManager: @MainActor CBCentralManagerDelega
         upsertDiscovered(peripheral, advertisementData: advertisementData, rssi: RSSI)
     }
 
-    public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+    public func centralManager(_: CBCentralManager, didConnect peripheral: CBPeripheral) {
         peripheralsByID[peripheral.identifier] = peripheral
         let s = ensureSensor(
             id: peripheral.identifier,
@@ -312,13 +377,13 @@ extension CyclingSpeedAndCadenceSensorManager: @MainActor CBCentralManagerDelega
         rebuildAndPublish()
     }
 
-    public func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+    public func centralManager(_: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
         sensorsByID[peripheral.identifier]?.didFailToConnect()
         rebuildAndPublish()
     }
 
     public func centralManager(
-        _ central: CBCentralManager,
+        _: CBCentralManager,
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {

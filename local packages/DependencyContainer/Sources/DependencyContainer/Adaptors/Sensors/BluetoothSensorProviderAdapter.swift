@@ -32,8 +32,7 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
     }
 
     var bluetoothAvailability: AnyPublisher<BluetoothAvailability, Never> {
-        // TODO(phase-04): Map `CBCentralManager` / Core Bluetooth authorization to `BluetoothAvailability`.
-        Just(BluetoothAvailability.poweredOn).eraseToAnyPublisher()
+        BluetoothAvailabilityAdapter.publisher(source: manager.bluetoothAvailability)
     }
 
     init(manager: CyclingSpeedAndCadenceSensorManager) {

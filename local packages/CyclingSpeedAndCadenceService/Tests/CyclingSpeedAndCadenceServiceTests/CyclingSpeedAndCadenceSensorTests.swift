@@ -116,26 +116,3 @@ struct CyclingSpeedAndCadenceSensorTests {
         return d
     }
 }
-
-@MainActor
-private final class FakeCSCPeripheral: CSCPeripheral {
-    let identifier: UUID
-    var name: String?
-    var state: CBPeripheralState = .disconnected
-    weak var delegate: (any CBPeripheralDelegate)?
-    var services: [CBService]?
-    var discoverServiceUUIDs: [CBUUID]?
-
-    init(identifier: UUID, name: String) {
-        self.identifier = identifier
-        self.name = name
-    }
-
-    func discoverServices(_ serviceUUIDs: [CBUUID]?) {
-        discoverServiceUUIDs = serviceUUIDs
-    }
-
-    func discoverCharacteristics(_: [CBUUID]?, for _: CBService) {}
-
-    func setNotifyValue(_: Bool, for _: CBCharacteristic) {}
-}

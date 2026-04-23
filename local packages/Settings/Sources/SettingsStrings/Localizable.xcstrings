@@ -330,6 +330,61 @@
           }
         }
       }
+    },
+    "Sensors.Bluetooth.Off.Body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn on Bluetooth to scan and connect. Known sensors stay listed; they will show as disconnected until Bluetooth is on."
+          }
+        }
+      }
+    },
+    "Sensors.Bluetooth.Off.Title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetooth is off"
+          }
+        }
+      }
+    },
+    "Sensors.Permissions.Denied.Body" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To add and use sensors, allow Bluetooth access for Biker in the Settings app."
+          }
+        }
+      }
+    },
+    "Sensors.Permissions.Denied.Title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetooth permission required"
+          }
+        }
+      }
+    },
+    "Sensors.Scan.Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan is unavailable until Bluetooth is on and ready."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

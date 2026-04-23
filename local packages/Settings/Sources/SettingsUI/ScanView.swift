@@ -20,7 +20,14 @@ struct ScanView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if viewModel.discoveredSensors.isEmpty {
+                if !viewModel.isBluetoothScanAllowed {
+                    ContentUnavailableView {
+                        Label(
+                            String(localized: "Sensors.Scan.Unavailable", bundle: .settingsStrings, comment: "Scan sheet message when Bluetooth is not ready"),
+                            systemImage: "antenna.radiowaves.left.and.right.slash"
+                        )
+                    }
+                } else if viewModel.discoveredSensors.isEmpty {
                     ContentUnavailableView {
                         Label(
                             String(localized: "No sensors found", bundle: .settingsStrings, comment: "Empty state when BLE scan finds no CSC sensors"),
@@ -70,10 +77,20 @@ struct ScanView: View {
                 }
             }
             .onAppear {
-                viewModel.startScan()
+                if viewModel.isBluetoothScanAllowed {
+                    viewModel.startScan()
+                } else {
+                    dismiss()
+                }
             }
             .onDisappear {
                 viewModel.stopScan()
+            }
+            .onChange(of: viewModel.shouldDismissScanSheet) { _, should in
+                if should {
+                    dismiss()
+                    viewModel.acknowledgeScanSheetDismissal()
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

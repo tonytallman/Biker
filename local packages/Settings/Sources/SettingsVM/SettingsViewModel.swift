@@ -26,6 +26,8 @@ open class SettingsViewModel {
     package var locationBackgroundStatusText: String = ""
     package var bluetoothBackgroundStatusText: String = ""
     package var knownSensors: [SensorViewModel] = []
+    /// Current `SensorProvider` Bluetooth availability (ADR-0007 / Phase 04).
+    package var bluetoothAvailability: BluetoothAvailability = .notDetermined
 
     package let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     package let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
@@ -87,6 +89,17 @@ open class SettingsViewModel {
                 self?.reconcileKnownSensors(sensors)
             }
             .store(in: &cancellables)
+
+        sensorProvider.bluetoothAvailability
+            .removeDuplicates()
+            .sink { [weak self] availability in
+                self?.bluetoothAvailability = availability
+            }
+            .store(in: &cancellables)
+    }
+
+    package var sensorsSectionState: SensorsSectionState {
+        bluetoothAvailability.sensorsSectionState
     }
 
     private func reconcileKnownSensors(_ sensors: [any Sensor]) {
@@ -140,6 +153,7 @@ open class SettingsViewModel {
     }
 
     package func scanForSensors() {
+        guard bluetoothAvailability == .poweredOn else { return }
         sensorProvider.scan()
     }
 
