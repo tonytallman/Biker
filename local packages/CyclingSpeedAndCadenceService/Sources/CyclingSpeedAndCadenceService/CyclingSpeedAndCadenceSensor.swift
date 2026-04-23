@@ -65,19 +65,36 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
     public init(
         id: UUID,
         name: String,
-        initialConnectionState: ConnectionState
+        initialConnectionState: ConnectionState,
+        initialWheelDiameter: Measurement<UnitLength>? = nil,
+        initialIsEnabled: Bool? = nil
     ) {
         self.id = id
         self.storedName = name
         self.connectionStateSubject = CurrentValueSubject(initialConnectionState)
-        self.wheelDiameterSubject = CurrentValueSubject(Measurement(value: 700, unit: .millimeters))
-        self.isEnabledSubject = CurrentValueSubject(true)
+        let defaultDiameter = Measurement(
+            value: CSCKnownSensorDefaults.defaultWheelDiameterMeters,
+            unit: UnitLength.meters
+        )
+        let wheel = initialWheelDiameter ?? defaultDiameter
+        self.wheelDiameterSubject = CurrentValueSubject(wheel)
+        self.isEnabledSubject = CurrentValueSubject(initialIsEnabled ?? true)
         self.calculator = CSCDeltaCalculator(
             wheelCircumferenceMeters: Self.circumferenceMeters(
-                forWheelDiameter: Measurement(value: 700, unit: .millimeters)
+                forWheelDiameter: wheel
             )
         )
         super.init()
+    }
+
+    /// Last published wheel diameter.
+    public var currentWheelDiameter: Measurement<UnitLength> {
+        wheelDiameterSubject.value
+    }
+
+    /// Whether CSC measurements are applied to the delta calculator and outputs.
+    public var isEnabledValue: Bool {
+        isEnabledSubject.value
     }
 
     public func setConnectionState(_ state: ConnectionState) {
@@ -141,7 +158,7 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
     // MARK: - Internals
 
     private static func circumferenceMeters(forWheelDiameter d: Measurement<UnitLength>) -> Double {
-        d.converted(to: .meters).value * .pi
+        d.converted(to: UnitLength.meters).value * .pi
     }
 
     private func processCSCData(_ data: Data) {

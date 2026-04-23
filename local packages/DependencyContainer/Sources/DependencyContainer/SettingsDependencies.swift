@@ -20,11 +20,14 @@ final class SettingsDependencies {
         let settingsStorage = namespacedAppStorage.asSettingsStorage()
         systemSettings = DefaultSystemSettings(storage: settingsStorage)
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
-        let bluetoothSensorManager = CyclingSpeedAndCadenceSensorManager()
+        let cscKnownSensorPersistence = CSCKnownSensorPersistenceAdapter(appStorage: namespacedAppStorage)
+        let bluetoothSensorManager = CyclingSpeedAndCadenceSensorManager(
+            persistence: cscKnownSensorPersistence
+        )
+        bluetoothSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.bluetoothSensorManager = bluetoothSensorManager
         sensorProvider = BluetoothSensorProviderAdapter(
-            manager: bluetoothSensorManager,
-            appStorage: namespacedAppStorage,
+            manager: bluetoothSensorManager
         )
     }
     

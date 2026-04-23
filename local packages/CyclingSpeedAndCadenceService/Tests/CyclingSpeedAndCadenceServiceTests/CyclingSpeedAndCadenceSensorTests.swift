@@ -85,6 +85,18 @@ struct CyclingSpeedAndCadenceSensorTests {
         #expect(afterReconnect.count == 1)
     }
 
+    @Test func init_seedsWheelDiameterAndIsEnabled() {
+        let s = CyclingSpeedAndCadenceSensor(
+            id: UUID(),
+            name: "S",
+            initialConnectionState: .disconnected,
+            initialWheelDiameter: Measurement(value: 0.55, unit: UnitLength.meters),
+            initialIsEnabled: false
+        )
+        #expect(s.isEnabledValue == false)
+        #expect(s.currentWheelDiameter == Measurement(value: 0.55, unit: UnitLength.meters))
+    }
+
     @Test func fakePeripheral_bindsToSensor() {
         let f = FakeCSCPeripheral(identifier: UUID(), name: "F")
         let s = CyclingSpeedAndCadenceSensor(

@@ -12,14 +12,8 @@ import SettingsVM
 @MainActor
 final class BluetoothSensorProviderAdapter: SensorProvider {
     private let manager: CyclingSpeedAndCadenceSensorManager
-    private let appStorage: AppStorage
-    private var cancellables = Set<AnyCancellable>()
-    private var lastPersistedSensorIDs: Set<UUID>
-
     private var knownAdapters: [UUID: CSCKnownSensorAdapter] = [:]
     private var discoveredAdapters: [UUID: CSCDiscoveredSensorAdapter] = [:]
-
-    private static let knownSensorsKey = "knownSensors"
 
     var knownSensors: AnyPublisher<[any Sensor], Never> {
         manager.knownSensors
@@ -42,17 +36,8 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
         Just(BluetoothAvailability.poweredOn).eraseToAnyPublisher()
     }
 
-    init(manager: CyclingSpeedAndCadenceSensorManager, appStorage: AppStorage) {
+    init(manager: CyclingSpeedAndCadenceSensorManager) {
         self.manager = manager
-        self.appStorage = appStorage
-        self.lastPersistedSensorIDs = Self.loadPersistedKnownSensors(manager: manager, appStorage: appStorage)
-        manager.reconnectDisconnectedKnownSensorsIfPoweredOn()
-
-        manager.knownSensors
-            .sink { [weak self] sensors in
-                self?.persistKnownSensorsIfNeeded(sensors)
-            }
-            .store(in: &cancellables)
     }
 
     func scan() {
@@ -106,33 +91,6 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
             return adapter
         }
     }
-
-    private static func loadPersistedKnownSensors(
-        manager: CyclingSpeedAndCadenceSensorManager,
-        appStorage: AppStorage
-    ) -> Set<UUID> {
-        guard let raw = appStorage.get(forKey: knownSensorsKey) as? [[String: Any]] else {
-            return []
-        }
-        var ids = Set<UUID>()
-        for dict in raw {
-            guard let idStr = dict["id"] as? String,
-                  let name = dict["name"] as? String,
-                  let id = UUID(uuidString: idStr)
-            else { continue }
-            manager.seedKnownSensor(id: id, name: name)
-            ids.insert(id)
-        }
-        return ids
-    }
-
-    private func persistKnownSensorsIfNeeded(_ sensors: [ConnectedSensor]) {
-        let ids = Set(sensors.map(\.id))
-        guard ids != lastPersistedSensorIDs else { return }
-        lastPersistedSensorIDs = ids
-        let payload: [[String: String]] = sensors.map { ["id": $0.id.uuidString, "name": $0.name] }
-        appStorage.set(value: payload, forKey: Self.knownSensorsKey)
-    }
 }
 
 // MARK: - Known CSC sensor
@@ -145,6 +103,7 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
     private let connectionStateSubject: CurrentValueSubject<SensorConnectionState, Never>
     private let isEnabledSubject: CurrentValueSubject<Bool, Never>
     private let wheelDiameterSubject: CurrentValueSubject<Measurement<UnitLength>, Never>
+    private var cscCancellables = Set<AnyCancellable>()
 
     var name: String { storedName }
     var type: SensorType { .cyclingSpeedAndCadence }
@@ -164,16 +123,42 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
     init(manager: CyclingSpeedAndCadenceSensorManager, id: UUID) {
         self.manager = manager
         self.id = id
-        self.storedName = "Cycling sensor"
-        self.connectionStateSubject = CurrentValueSubject(.disconnected)
-        self.isEnabledSubject = CurrentValueSubject(true)
-        self.wheelDiameterSubject = CurrentValueSubject(Measurement(value: 700, unit: .millimeters))
+        if let csc = manager.cscSensor(for: id) {
+            self.storedName = csc.name
+            self.connectionStateSubject = CurrentValueSubject(
+                mapConnectionStateToSensorState(csc.connectedSensorSnapshot.connectionState)
+            )
+            self.wheelDiameterSubject = CurrentValueSubject(csc.currentWheelDiameter)
+            self.isEnabledSubject = CurrentValueSubject(csc.isEnabledValue)
+        } else {
+            self.storedName = "Cycling sensor"
+            self.connectionStateSubject = CurrentValueSubject(.disconnected)
+            self.wheelDiameterSubject = CurrentValueSubject(
+                Measurement(
+                    value: CSCKnownSensorDefaults.defaultWheelDiameterMeters,
+                    unit: UnitLength.meters
+                )
+            )
+            self.isEnabledSubject = CurrentValueSubject(true)
+        }
+        if let csc = manager.cscSensor(for: id) {
+            csc.wheelDiameter
+                .sink { [weak self] value in
+                    self?.wheelDiameterSubject.send(value)
+                }
+                .store(in: &cscCancellables)
+            csc.isEnabled
+                .sink { [weak self] value in
+                    self?.isEnabledSubject.send(value)
+                }
+                .store(in: &cscCancellables)
+        }
     }
 
     func update(from sensor: ConnectedSensor) {
         id = sensor.id
         storedName = sensor.name
-        connectionStateSubject.send(mapConnectionState(sensor.connectionState))
+        connectionStateSubject.send(mapConnectionStateToSensorState(sensor.connectionState))
     }
 
     func connect() {
@@ -189,22 +174,20 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
     }
 
     func setEnabled(_ enabled: Bool) {
-        isEnabledSubject.send(enabled)
+        manager.setEnabled(peripheralID: id, enabled)
     }
 
     func setWheelDiameter(_ diameter: Measurement<UnitLength>) {
-        wheelDiameterSubject.send(diameter)
+        manager.setWheelDiameter(peripheralID: id, diameter)
     }
+}
 
-    private func mapConnectionState(_ s: ConnectionState) -> SensorConnectionState {
-        switch s {
-        case .disconnected:
-            return .disconnected
-        case .connecting:
-            return .connecting
-        case .connected:
-            return .connected
-        }
+@MainActor
+private func mapConnectionStateToSensorState(_ s: ConnectionState) -> SensorConnectionState {
+    switch s {
+    case .disconnected: return .disconnected
+    case .connecting: return .connecting
+    case .connected: return .connected
     }
 }
 

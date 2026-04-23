@@ -13,6 +13,7 @@ import Foundation
 public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     private let central: CBCentralManager
     private let cscServiceUUID: CBUUID
+    private let store: CSCKnownSensorStore
 
     private let discoveredSubject = CurrentValueSubject<[DiscoveredSensor], Never>([])
     private let knownSensorsSubject = CurrentValueSubject<[ConnectedSensor], Never>([])
@@ -22,12 +23,20 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     private var sensorsByID: [UUID: CyclingSpeedAndCadenceSensor] = [:]
     private var peripheralsByID: [UUID: CBPeripheral] = [:]
     private var mergeCancellable: AnyCancellable?
+    private var storeValueCancellables = Set<AnyCancellable>()
 
-    public override init() {
+    public init(persistence: any CSCKnownSensorPersistence) {
         self.cscServiceUUID = CBUUID(string: "1816")
         self.central = CBCentralManager(delegate: nil, queue: .main)
+        self.store = CSCKnownSensorStore(persistence: persistence)
         super.init()
         self.central.delegate = self
+        for record in self.store.loadAll() {
+            installSensorFromLoadedRecord(record)
+        }
+        rebindDerivedMerge()
+        rebindStoreSubscriptions()
+        rebuildAndPublish()
     }
 
     public var discoveredSensors: AnyPublisher<[DiscoveredSensor], Never> {
@@ -56,6 +65,20 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         sensorsListSubject.eraseToAnyPublisher()
     }
 
+    // MARK: - Public bridge for the composition root
+
+    public func cscSensor(for id: UUID) -> CyclingSpeedAndCadenceSensor? {
+        sensorsByID[id]
+    }
+
+    public func setWheelDiameter(peripheralID: UUID, _ value: Measurement<UnitLength>) {
+        sensorsByID[peripheralID]?.setWheelDiameter(value)
+    }
+
+    public func setEnabled(peripheralID: UUID, _ enabled: Bool) {
+        sensorsByID[peripheralID]?.setEnabled(enabled)
+    }
+
     public func startScan() {
         discoveredSubject.send([])
 
@@ -71,25 +94,14 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         central.stopScan()
     }
 
-    /// Restores a known sensor from persistence without connecting (disconnected until user connects or auto-reconnect runs).
-    public func seedKnownSensor(id: UUID, name: String) {
-        guard sensorsByID[id] == nil else { return }
-        let _ = ensureSensor(id: id, name: name)
-        if let retrieved = central.retrievePeripherals(withIdentifiers: [id]).first {
-            peripheralsByID[id] = retrieved
-            sensorsByID[id]?.bind(peripheral: retrieved)
-        }
-        rebuildAndPublish()
-    }
-
-    /// Connects to a peripheral previously seen during scan, retrieved via Core Bluetooth, or seeded from persistence.
+    /// Connects to a peripheral previously seen during scan, retrieved via Core Bluetooth, or known from the store.
     public func connect(to peripheralID: UUID) {
         guard central.state == .poweredOn else { return }
         guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
         let name = peripheral.name
             ?? knownSensorsSubject.value.first(where: { $0.id == peripheralID })?.name
             ?? "Cycling sensor"
-        let sensor = ensureSensor(id: peripheralID, name: name)
+        let sensor = ensureSensor(id: peripheralID, name: name, persistIfNew: true)
         if let n = peripheral.name, !n.isEmpty {
             sensor.updateName(n)
         } else {
@@ -116,9 +128,11 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
                 central.cancelPeripheralConnection(peripheral)
             }
         }
+        store.remove(id: peripheralID)
         peripheralsByID[peripheralID] = nil
         sensorsByID[peripheralID] = nil
         rebindDerivedMerge()
+        rebindStoreSubscriptions()
         rebuildAndPublish()
     }
 
@@ -130,6 +144,33 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
 
     // MARK: - Internals
 
+    private func makeRecord(from sensor: CyclingSpeedAndCadenceSensor) -> CSCKnownSensorRecord {
+        CSCKnownSensorRecord(
+            id: sensor.id,
+            name: sensor.name,
+            sensorType: CSCKnownSensorType.cyclingSpeedAndCadence.rawValue,
+            isEnabled: sensor.isEnabledValue,
+            wheelDiameterMeters: sensor.currentWheelDiameter.converted(to: UnitLength.meters).value
+        )
+    }
+
+    private func installSensorFromLoadedRecord(_ record: CSCKnownSensorRecord) {
+        guard sensorsByID[record.id] == nil else { return }
+        let wheel = Measurement(value: record.wheelDiameterMeters, unit: UnitLength.meters)
+        let s = CyclingSpeedAndCadenceSensor(
+            id: record.id,
+            name: record.name,
+            initialConnectionState: .disconnected,
+            initialWheelDiameter: wheel,
+            initialIsEnabled: record.isEnabled
+        )
+        sensorsByID[record.id] = s
+        if let retrieved = central.retrievePeripherals(withIdentifiers: [record.id]).first {
+            peripheralsByID[record.id] = retrieved
+            s.bind(peripheral: retrieved)
+        }
+    }
+
     private func resolvePeripheral(peripheralID: UUID) -> CBPeripheral? {
         if let existing = peripheralsByID[peripheralID] {
             return existing
@@ -140,7 +181,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         return peripheral
     }
 
-    private func ensureSensor(id: UUID, name: String) -> CyclingSpeedAndCadenceSensor {
+    private func ensureSensor(id: UUID, name: String, persistIfNew: Bool) -> CyclingSpeedAndCadenceSensor {
         if let s = sensorsByID[id] {
             s.setNameIfNeeded(name)
             return s
@@ -152,6 +193,10 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         )
         sensorsByID[id] = s
         rebindDerivedMerge()
+        rebindStoreSubscriptions()
+        if persistIfNew {
+            store.upsert(makeRecord(from: s))
+        }
         return s
     }
 
@@ -180,16 +225,37 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         let sensorsSorted = list.compactMap { s in sensorsByID[s.id] }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         sensorsListSubject.send(sensorsSorted)
+        for s in sensorsByID.values {
+            store.upsert(makeRecord(from: s))
+        }
     }
 
     private func rebindDerivedMerge() {
         mergeCancellable?.cancel()
         let sensors = Array(sensorsByID.values)
-        guard !sensors.isEmpty else { return }
+        guard !sensors.isEmpty else {
+            mergeCancellable = nil
+            return
+        }
         mergeCancellable = Publishers.MergeMany(sensors.map { $0.derivedUpdates })
             .sink { [weak self] update in
                 self?.derivedUpdateSubject.send(update)
             }
+    }
+
+    private func rebindStoreSubscriptions() {
+        storeValueCancellables = []
+        for (id, s) in sensorsByID {
+            s.wheelDiameter
+                .combineLatest(s.isEnabled)
+                .dropFirst(1)
+                .sink { [weak self] _, _ in
+                    guard let self else { return }
+                    guard let sensor = self.sensorsByID[id] else { return }
+                    self.store.upsert(self.makeRecord(from: sensor))
+                }
+                .store(in: &storeValueCancellables)
+        }
     }
 
     private func reconnectKnownDisconnectedSensors(central: CBCentralManager) {
@@ -200,7 +266,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
             guard let peripheral = retrieved.first else { continue }
             peripheralsByID[peripheral.identifier] = peripheral
             let name = peripheral.name ?? known.name
-            let csc = sensorsByID[peripheral.identifier] ?? ensureSensor(id: known.id, name: name)
+            let csc = sensorsByID[peripheral.identifier] ?? ensureSensor(id: known.id, name: name, persistIfNew: true)
             csc.updateName(name)
             csc.bind(peripheral: peripheral)
             csc.willEnterConnecting()
@@ -234,7 +300,8 @@ extension CyclingSpeedAndCadenceSensorManager: @MainActor CBCentralManagerDelega
             id: peripheral.identifier,
             name: peripheral.name
                 ?? knownSensorsSubject.value.first(where: { $0.id == peripheral.identifier })?.name
-                ?? "Cycling sensor"
+                ?? "Cycling sensor",
+            persistIfNew: true
         )
         if let n = peripheral.name, !n.isEmpty {
             s.updateName(n)
@@ -267,13 +334,16 @@ extension CyclingSpeedAndCadenceSensorManager {
     internal func _test_registerSensor(_ sensor: CyclingSpeedAndCadenceSensor) {
         sensorsByID[sensor.id] = sensor
         rebindDerivedMerge()
+        rebindStoreSubscriptions()
         rebuildAndPublish()
     }
 
     internal func _test_forgetWithoutCancel(peripheralID: UUID) {
+        store.remove(id: peripheralID)
         peripheralsByID[peripheralID] = nil
         sensorsByID[peripheralID] = nil
         rebindDerivedMerge()
+        rebindStoreSubscriptions()
         rebuildAndPublish()
     }
 }
