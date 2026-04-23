@@ -10,7 +10,7 @@ import Foundation
 
 @MainActor
 enum BLEMetricAdaptors {
-    static func speed(manager: BluetoothSensorManager) -> AnyMetric<UnitSpeed> {
+    static func speed(manager: CyclingSpeedAndCadenceSensorManager) -> AnyMetric<UnitSpeed> {
         let publisher = manager.derivedUpdates
             .compactMap { update -> Measurement<UnitSpeed>? in
                 guard let value = update.speedMetersPerSecond else { return nil }
@@ -19,7 +19,7 @@ enum BLEMetricAdaptors {
         return AnyMetric(publisher: publisher, isAvailable: manager.hasConnectedSensor)
     }
 
-    static func cadence(manager: BluetoothSensorManager) -> AnyMetric<UnitFrequency> {
+    static func cadence(manager: CyclingSpeedAndCadenceSensorManager) -> AnyMetric<UnitFrequency> {
         let publisher = manager.derivedUpdates
             .compactMap { update -> Measurement<UnitFrequency>? in
                 guard let value = update.cadenceRPM else { return nil }
@@ -28,7 +28,7 @@ enum BLEMetricAdaptors {
         return AnyMetric(publisher: publisher, isAvailable: manager.hasConnectedSensor)
     }
 
-    static func distanceDelta(manager: BluetoothSensorManager) -> AnyMetric<UnitLength> {
+    static func distanceDelta(manager: CyclingSpeedAndCadenceSensorManager) -> AnyMetric<UnitLength> {
         let publisher = manager.derivedUpdates
             .compactMap { update -> Measurement<UnitLength>? in
                 guard let value = update.distanceDeltaMeters else { return nil }

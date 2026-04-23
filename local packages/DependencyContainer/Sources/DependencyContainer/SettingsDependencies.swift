@@ -12,7 +12,7 @@ import SettingsVM
 final class SettingsDependencies {
     private let systemSettings: SettingsViewModel.SystemSettings
     private let sensorProvider: any SensorProvider
-    let bluetoothSensorManager: BluetoothSensorManager
+    let bluetoothSensorManager: CyclingSpeedAndCadenceSensorManager
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
@@ -20,7 +20,7 @@ final class SettingsDependencies {
         let settingsStorage = namespacedAppStorage.asSettingsStorage()
         systemSettings = DefaultSystemSettings(storage: settingsStorage)
         metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
-        let bluetoothSensorManager = BluetoothSensorManager()
+        let bluetoothSensorManager = CyclingSpeedAndCadenceSensorManager()
         self.bluetoothSensorManager = bluetoothSensorManager
         sensorProvider = BluetoothSensorProviderAdapter(
             manager: bluetoothSensorManager,

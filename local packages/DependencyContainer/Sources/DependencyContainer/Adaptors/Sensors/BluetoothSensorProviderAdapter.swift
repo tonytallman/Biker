@@ -11,7 +11,7 @@ import SettingsVM
 
 @MainActor
 final class BluetoothSensorProviderAdapter: SensorProvider {
-    private let manager: BluetoothSensorManager
+    private let manager: CyclingSpeedAndCadenceSensorManager
     private let appStorage: AppStorage
     private var cancellables = Set<AnyCancellable>()
     private var lastPersistedSensorIDs: Set<UUID>
@@ -42,7 +42,7 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
         Just(BluetoothAvailability.poweredOn).eraseToAnyPublisher()
     }
 
-    init(manager: BluetoothSensorManager, appStorage: AppStorage) {
+    init(manager: CyclingSpeedAndCadenceSensorManager, appStorage: AppStorage) {
         self.manager = manager
         self.appStorage = appStorage
         self.lastPersistedSensorIDs = Self.loadPersistedKnownSensors(manager: manager, appStorage: appStorage)
@@ -108,7 +108,7 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
     }
 
     private static func loadPersistedKnownSensors(
-        manager: BluetoothSensorManager,
+        manager: CyclingSpeedAndCadenceSensorManager,
         appStorage: AppStorage
     ) -> Set<UUID> {
         guard let raw = appStorage.get(forKey: knownSensorsKey) as? [[String: Any]] else {
@@ -139,7 +139,7 @@ final class BluetoothSensorProviderAdapter: SensorProvider {
 
 @MainActor
 private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
-    private let manager: BluetoothSensorManager
+    private let manager: CyclingSpeedAndCadenceSensorManager
     private(set) var id: UUID
     private var storedName: String
     private let connectionStateSubject: CurrentValueSubject<SensorConnectionState, Never>
@@ -161,7 +161,7 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
         wheelDiameterSubject.eraseToAnyPublisher()
     }
 
-    init(manager: BluetoothSensorManager, id: UUID) {
+    init(manager: CyclingSpeedAndCadenceSensorManager, id: UUID) {
         self.manager = manager
         self.id = id
         self.storedName = "Cycling sensor"
@@ -212,7 +212,7 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
 
 @MainActor
 private final class CSCDiscoveredSensorAdapter: SignalStrengthReporting {
-    private let manager: BluetoothSensorManager
+    private let manager: CyclingSpeedAndCadenceSensorManager
     private(set) var id: UUID
     private var storedName: String
     private let rssiSubject: CurrentValueSubject<Int, Never>
@@ -234,7 +234,7 @@ private final class CSCDiscoveredSensorAdapter: SignalStrengthReporting {
         rssiSubject.eraseToAnyPublisher()
     }
 
-    init(manager: BluetoothSensorManager, id: UUID) {
+    init(manager: CyclingSpeedAndCadenceSensorManager, id: UUID) {
         self.manager = manager
         self.id = id
         self.storedName = "Cycling sensor"
