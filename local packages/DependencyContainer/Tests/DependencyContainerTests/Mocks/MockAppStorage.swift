@@ -5,8 +5,9 @@
 //  Created by Tony Tallman on 2/12/26.
 //
 
-import Foundation
 import DependencyContainer
+import FitnessMachineService
+import Foundation
 
 final class MockAppStorage: AppStorage {
     private var storage: [String: Any] = [:]
@@ -29,3 +30,5 @@ final class MockAppStorage: AppStorage {
         setKeys.removeAll()
     }
 }
+
+extension MockAppStorage: FTMSPersistence {}

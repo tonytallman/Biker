@@ -58,6 +58,33 @@ struct CompositeSensorProviderTests {
     }
 
     @Test
+    func knownMergesCSCAndFTMSProvidersByName() {
+        let p1 = FakeSensorProvider()
+        let p2 = FakeSensorProvider()
+        let u1 = UUID()
+        let u2 = UUID()
+        let csc = MockPlainSensor(
+            id: u1,
+            name: "Zebra",
+            type: .cyclingSpeedAndCadence
+        )
+        let ftms = MockPlainSensor(
+            id: u2,
+            name: "alpha",
+            type: .fitnessMachine
+        )
+        let (composite, _) = makeCompositePoweredOn(sensorProviders: [p1, p2])
+        var last: [SensorType] = []
+        let sub = composite.knownSensors.sink { sensors in
+            last = sensors.map(\.type)
+        }
+        p1.setKnown([csc])
+        p2.setKnown([ftms])
+        #expect(last == [.fitnessMachine, .cyclingSpeedAndCadence])
+        _ = sub
+    }
+
+    @Test
     func discoveredConnectedBeforeStrongerRSSI() {
         let p1 = FakeSensorProvider()
         let u1 = UUID()

@@ -10,6 +10,7 @@ import Foundation
 
 import CoreLogic
 import DashboardVM
+import FitnessMachineService
 import MainVM
 import MetricsFromCoreLocation
 import SettingsVM
@@ -85,10 +86,12 @@ final public class DependencyContainer {
         distanceSelector = nil
         #else
         let bleManager = settingsDependencies.bluetoothSensorManager
+        let ftmsManager = settingsDependencies.fitnessMachineSensorManager
 
         let bleSpeed = BLEMetricAdaptors.speed(manager: bleManager)
+        let ftmsSpeed = FTMSMetricAdaptors.speed(manager: ftmsManager)
         let gpsSpeed = GPSMetricAdaptors.speed(service: speedAndDistanceService)
-        let speedSel = PrioritizedMetricSelector(sources: [bleSpeed, gpsSpeed])
+        let speedSel = PrioritizedMetricSelector(sources: [bleSpeed, ftmsSpeed, gpsSpeed])
         speedSelector = speedSel
 
         // Raw speed (before unit conversion)
@@ -107,7 +110,8 @@ final public class DependencyContainer {
             .inUnits(settings.speedUnits)
 
         let bleCadence = BLEMetricAdaptors.cadence(manager: bleManager)
-        let cadSel = PrioritizedMetricSelector(sources: [bleCadence])
+        let ftmsCadence = FTMSMetricAdaptors.cadence(manager: ftmsManager)
+        let cadSel = PrioritizedMetricSelector(sources: [bleCadence, ftmsCadence])
         cadenceSelector = cadSel
         cadencePublisher = cadSel.publisher
             .inUnits(Just(.revolutionsPerMinute))

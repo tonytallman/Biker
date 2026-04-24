@@ -6,6 +6,7 @@
 //
 
 import CyclingSpeedAndCadenceService
+import FitnessMachineService
 import SettingsVM
 
 @MainActor
@@ -13,6 +14,7 @@ final class SettingsDependencies {
     private let systemSettings: SettingsViewModel.SystemSettings
     private let compositeSensorProvider: CompositeSensorProvider
     let bluetoothSensorManager: CyclingSpeedAndCadenceSensorManager
+    let fitnessMachineSensorManager: FitnessMachineSensorManager
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
@@ -26,12 +28,19 @@ final class SettingsDependencies {
         )
         bluetoothSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.bluetoothSensorManager = bluetoothSensorManager
+
+        let fitnessMachineSensorManager = FitnessMachineSensorManager(persistence: namespacedAppStorage)
+        fitnessMachineSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
+        self.fitnessMachineSensorManager = fitnessMachineSensorManager
+
         let cscSensorProvider = CSCSensorProvider(manager: bluetoothSensorManager)
-        let systemAvailability = BluetoothAvailabilityAdapter.publisher(
-            source: bluetoothSensorManager.bluetoothAvailability
+        let ftmsSensorProvider = FTMSSensorProvider(manager: fitnessMachineSensorManager)
+        let systemAvailability = BluetoothAvailabilityAdapter.combined(
+            csc: bluetoothSensorManager.bluetoothAvailability,
+            ftms: fitnessMachineSensorManager.bluetoothAvailability
         )
         compositeSensorProvider = CompositeSensorProvider(
-            sensorProviders: [cscSensorProvider],
+            sensorProviders: [cscSensorProvider, ftmsSensorProvider],
             systemAvailability: systemAvailability,
         )
     }

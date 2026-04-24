@@ -21,10 +21,11 @@ let package = Package(
     dependencies: [
         .package(path: "../CoreLogic"),
         .package(path: "../CyclingSpeedAndCadenceService"),
-        .package(path: "../MetricsFromCoreLocation"),
-        .package(path: "../MainView"),
-        .package(path: "../Settings"),
         .package(path: "../Dashboard"),
+        .package(path: "../FitnessMachineService"),
+        .package(path: "../MainView"),
+        .package(path: "../MetricsFromCoreLocation"),
+        .package(path: "../Settings"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -34,6 +35,7 @@ let package = Package(
             dependencies: [
                 "CoreLogic",
                 "CyclingSpeedAndCadenceService",
+                "FitnessMachineService",
                 "MetricsFromCoreLocation",
                 .product(name: "MainVM", package: "MainView"),
                 .product(name: "SettingsVM", package: "Settings"),
@@ -45,6 +47,7 @@ let package = Package(
             dependencies: [
                 "DependencyContainer",
                 "CyclingSpeedAndCadenceService",
+                "FitnessMachineService",
                 .product(name: "SettingsVM", package: "Settings"),
             ]
         ),
