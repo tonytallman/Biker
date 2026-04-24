@@ -1,0 +1,136 @@
+//
+//  FTMSPeripheralLexMetrics.swift
+//  DependencyContainer
+//
+//  Per-peripheral FTMS metric selection: lexicographic `UUID.uuidString` among connected sensors (ADR-0006).
+//
+
+import Combine
+import CoreLogic
+import FitnessMachineService
+import Foundation
+
+@MainActor
+final class FTMSPeripheralLexMetrics {
+    private var cancellables = Set<AnyCancellable>()
+    private var perSensorCancellables = Set<AnyCancellable>()
+
+    private var currentSensors: [FitnessMachineSensor] = []
+    private var speedSnap: [UUID: (Bool, Measurement<UnitSpeed>?)] = [:]
+    private var cadenceSnap: [UUID: (Bool, Measurement<UnitFrequency>?)] = [:]
+
+    private let speedOut = PassthroughSubject<Measurement<UnitSpeed>, Never>()
+    private let speedAvail = CurrentValueSubject<Bool, Never>(false)
+    private let cadenceOut = PassthroughSubject<Measurement<UnitFrequency>, Never>()
+    private let cadenceAvail = CurrentValueSubject<Bool, Never>(false)
+
+    let speed: AnyMetric<UnitSpeed>
+    let cadence: AnyMetric<UnitFrequency>
+
+    init(manager: FitnessMachineSensorManager) {
+        self.speed = AnyMetric(publisher: speedOut, isAvailable: speedAvail)
+        self.cadence = AnyMetric(publisher: cadenceOut, isAvailable: cadenceAvail)
+
+        manager.sensors
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] list in
+                self?.rebindSensors(list)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func rebindSensors(_ list: [FitnessMachineSensor]) {
+        perSensorCancellables.removeAll()
+        currentSensors = list
+        let ids = list.map(\.id)
+        speedSnap = Dictionary(uniqueKeysWithValues: ids.map { ($0, (false, nil)) })
+        cadenceSnap = Dictionary(uniqueKeysWithValues: ids.map { ($0, (false, nil)) })
+
+        for s in list {
+            let id = s.id
+            Publishers.CombineLatest(
+                s.connectionState.map { $0 == .connected }.removeDuplicates(),
+                s.speedOptional
+            )
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] c, v in
+                self?.speedSnap[id] = (c, v)
+                self?.emitSpeed()
+            }
+            .store(in: &perSensorCancellables)
+
+            Publishers.CombineLatest(
+                s.connectionState.map { $0 == .connected }.removeDuplicates(),
+                s.cadenceOptional
+            )
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] c, v in
+                self?.cadenceSnap[id] = (c, v)
+                self?.emitCadence()
+            }
+            .store(in: &perSensorCancellables)
+        }
+        emitSpeed()
+        emitCadence()
+    }
+
+    private func emitSpeed() {
+        speedAvail.send(Self.anyConnectedNonNilSpeed(currentSensors, snap: speedSnap))
+        if let m = Self.pickLexSpeed(sensors: currentSensors, snap: speedSnap) {
+            speedOut.send(m)
+        }
+    }
+
+    private func emitCadence() {
+        cadenceAvail.send(Self.anyConnectedNonNilCadence(currentSensors, snap: cadenceSnap))
+        if let m = Self.pickLexCadence(sensors: currentSensors, snap: cadenceSnap) {
+            cadenceOut.send(m)
+        }
+    }
+
+    private static func sortedIds(_ sensors: [FitnessMachineSensor]) -> [UUID] {
+        sensors.map(\.id).sorted { $0.uuidString < $1.uuidString }
+    }
+
+    private static func anyConnectedNonNilSpeed(
+        _ sensors: [FitnessMachineSensor],
+        snap: [UUID: (Bool, Measurement<UnitSpeed>?)]
+    ) -> Bool {
+        sortedIds(sensors).contains { id in
+            guard let t = snap[id] else { return false }
+            return t.0 && t.1 != nil
+        }
+    }
+
+    private static func anyConnectedNonNilCadence(
+        _ sensors: [FitnessMachineSensor],
+        snap: [UUID: (Bool, Measurement<UnitFrequency>?)]
+    ) -> Bool {
+        sortedIds(sensors).contains { id in
+            guard let t = snap[id] else { return false }
+            return t.0 && t.1 != nil
+        }
+    }
+
+    private static func pickLexSpeed(
+        sensors: [FitnessMachineSensor],
+        snap: [UUID: (Bool, Measurement<UnitSpeed>?)]
+    ) -> Measurement<UnitSpeed>? {
+        for id in sortedIds(sensors) {
+            guard let t = snap[id], t.0, let m = t.1 else { continue }
+            return m
+        }
+        return nil
+    }
+
+    private static func pickLexCadence(
+        sensors: [FitnessMachineSensor],
+        snap: [UUID: (Bool, Measurement<UnitFrequency>?)]
+    ) -> Measurement<UnitFrequency>? {
+        for id in sortedIds(sensors) {
+            guard let t = snap[id], t.0, let m = t.1 else { continue }
+            return m
+        }
+        return nil
+    }
+}

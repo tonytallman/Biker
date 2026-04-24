@@ -46,6 +46,10 @@ final public class DependencyContainer {
     private let distanceSelector: PrioritizedMetricSelector<UnitLength>?
     private let hrSelector: PrioritizedMetricSelector<UnitFrequency>?
 
+    /// Retain per-family lex adaptors (release) so CSC/FTMS Combine wiring stays active.
+    private let cscPeripheralLexMetrics: CSCPeripheralLexMetrics?
+    private let ftmsPeripheralLexMetrics: FTMSPeripheralLexMetrics?
+
     /// Shared metric scope for the current ride (auto-pause, future persistence).
     private let currentRide: MetricContext
 
@@ -89,6 +93,8 @@ final public class DependencyContainer {
         cadenceSelector = nil
         distanceSelector = nil
         hrSelector = nil
+        cscPeripheralLexMetrics = nil
+        ftmsPeripheralLexMetrics = nil
         heartRatePublisher = fake.cadence
             .map { cad -> Measurement<UnitFrequency>? in
                 let rpm = cad.converted(to: .revolutionsPerMinute).value
@@ -101,10 +107,18 @@ final public class DependencyContainer {
         let ftmsManager = settingsDependencies.fitnessMachineSensorManager
         let hrManager = settingsDependencies.heartRateSensorManager
 
-        let bleSpeed = BLEMetricAdaptors.speed(manager: bleManager)
-        let ftmsSpeed = FTMSMetricAdaptors.speed(manager: ftmsManager)
+        let metricTick = timeService.timePulse.map { _ in () }.eraseToAnyPublisher()
+
+        let cscLex = CSCPeripheralLexMetrics(manager: bleManager)
+        let ftmsLex = FTMSPeripheralLexMetrics(manager: ftmsManager)
+        cscPeripheralLexMetrics = cscLex
+        ftmsPeripheralLexMetrics = ftmsLex
+
         let gpsSpeed = GPSMetricAdaptors.speed(service: speedAndDistanceService)
-        let speedSel = PrioritizedMetricSelector(sources: [bleSpeed, ftmsSpeed, gpsSpeed])
+        let speedSel = PrioritizedMetricSelector(
+            sources: [cscLex.speed, ftmsLex.speed, gpsSpeed],
+            tick: metricTick
+        )
         speedSelector = speedSel
 
         // Raw speed (before unit conversion)
@@ -122,16 +136,19 @@ final public class DependencyContainer {
         speedPublisher = rawSpeed
             .inUnits(settings.speedUnits)
 
-        let bleCadence = BLEMetricAdaptors.cadence(manager: bleManager)
-        let ftmsCadence = FTMSMetricAdaptors.cadence(manager: ftmsManager)
-        let cadSel = PrioritizedMetricSelector(sources: [bleCadence, ftmsCadence])
+        let cadSel = PrioritizedMetricSelector(
+            sources: [cscLex.cadence, ftmsLex.cadence],
+            tick: metricTick
+        )
         cadenceSelector = cadSel
         cadencePublisher = cadSel.publisher
             .inUnits(Just(.revolutionsPerMinute))
 
-        let bleDist = BLEMetricAdaptors.distanceDelta(manager: bleManager)
         let gpsDist = GPSMetricAdaptors.distanceDelta(service: speedAndDistanceService)
-        let distSel = PrioritizedMetricSelector(sources: [bleDist, gpsDist])
+        let distSel = PrioritizedMetricSelector(
+            sources: [cscLex.distanceDelta, gpsDist],
+            tick: metricTick
+        )
         distanceSelector = distSel
         distanceMetric = AccumulatingMetric<UnitLength>(
             source: distSel.publisher,
@@ -140,7 +157,10 @@ final public class DependencyContainer {
         distancePublisher = distanceMetric.publisher
             .inUnits(settings.distanceUnits)
 
-        let hrSel = PrioritizedMetricSelector(sources: [HRMetricAdaptors.heartRate(manager: hrManager)])
+        let hrSel = PrioritizedMetricSelector(
+            sources: [HRMetricAdaptors.heartRate(manager: hrManager)],
+            tick: metricTick
+        )
         hrSelector = hrSel
         heartRatePublisher = Publishers.CombineLatest(
             hrSel.isAvailable.removeDuplicates(),

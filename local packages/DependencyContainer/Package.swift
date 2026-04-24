@@ -48,6 +48,7 @@ let package = Package(
             name: "DependencyContainerTests",
             dependencies: [
                 "DependencyContainer",
+                "CoreLogic",
                 "CyclingSpeedAndCadenceService",
                 "FitnessMachineService",
                 "HeartRateService",

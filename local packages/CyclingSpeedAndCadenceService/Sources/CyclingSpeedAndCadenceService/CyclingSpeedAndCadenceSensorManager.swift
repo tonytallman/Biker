@@ -25,6 +25,8 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     private var peripheralsByID: [UUID: any CSCPeripheral] = [:]
     private var mergeCancellable: AnyCancellable?
     private var storeValueCancellables = Set<AnyCancellable>()
+    private let dualCapableSubject = CurrentValueSubject<UUID?, Never>(nil)
+    private var dualCapableCancellables = Set<AnyCancellable>()
 
     /// Convenience: production central on the main queue.
     public init(persistence: any CSCKnownSensorPersistence) {
@@ -93,6 +95,12 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     /// All per-peripheral sensor instances (for composition root / future `CompositeSensorProvider`).
     public var sensors: AnyPublisher<[CyclingSpeedAndCadenceSensor], Never> {
         sensorsListSubject.eraseToAnyPublisher()
+    }
+
+    /// Among connected sensors whose CSC Feature reports both wheel and crank support, the lexicographically
+    /// smallest `UUID.uuidString` (ADR-0006 / SEN-TYP-5). `nil` if none or until Feature is read.
+    public var dualCapableSensor: AnyPublisher<UUID?, Never> {
+        dualCapableSubject.removeDuplicates().eraseToAnyPublisher()
     }
 
     public var bluetoothAvailability: AnyPublisher<CSCBluetoothAvailability, Never> {
@@ -295,6 +303,7 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
         for s in sensorsByID.values {
             store.upsert(makeRecord(from: s))
         }
+        rebindDualCapableSubscriptions()
     }
 
     private func rebindDerivedMerge() {
@@ -308,6 +317,27 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
             .sink { [weak self] update in
                 self?.derivedUpdateSubject.send(update)
             }
+    }
+
+    private func rebindDualCapableSubscriptions() {
+        dualCapableCancellables.removeAll()
+        for s in sensorsByID.values {
+            Publishers.CombineLatest(s.connectionState, s.feature)
+                .sink { [weak self] _, _ in
+                    self?.publishDualCapableSensor()
+                }
+                .store(in: &dualCapableCancellables)
+        }
+        publishDualCapableSensor()
+    }
+
+    private func publishDualCapableSensor() {
+        let candidates = sensorsByID.values.filter { sensor in
+            sensor._test_connectionSnapshot == .connected
+                && sensor._test_featureSnapshot?.isDualCapable == true
+        }
+        let sorted = candidates.map(\.id).sorted { $0.uuidString < $1.uuidString }
+        dualCapableSubject.send(sorted.first)
     }
 
     private func rebindStoreSubscriptions() {

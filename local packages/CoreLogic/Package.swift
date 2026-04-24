@@ -32,7 +32,10 @@ let package = Package(
         ),
         .testTarget(
             name: "CoreLogicTests",
-            dependencies: ["CoreLogic"]
+            dependencies: [
+                "CoreLogic",
+                .product(name: "CombineSchedulers", package: "combine-schedulers"),
+            ]
         ),
     ]
 )

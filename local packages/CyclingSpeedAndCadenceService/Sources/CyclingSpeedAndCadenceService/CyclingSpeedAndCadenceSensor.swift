@@ -13,6 +13,7 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
 
     private static let cscServiceUUID = CBUUID(string: "1816")
     private static let cscMeasurementUUID = CBUUID(string: "2A5B")
+    private static let cscFeatureUUID = CBUUID(string: "2A5C")
 
     private var storedName: String
 
@@ -26,6 +27,12 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
     private let wheelDiameterSubject: CurrentValueSubject<Measurement<UnitLength>, Never>
     private let isEnabledSubject: CurrentValueSubject<Bool, Never>
     private let derivedSubject = PassthroughSubject<CSCDerivedUpdate, Never>()
+    private let featureSubject = CurrentValueSubject<CSCFeature?, Never>(nil)
+
+    /// CSC Feature characteristic (0x2A5C), when read after connect. `nil` until read or if unavailable.
+    public var feature: AnyPublisher<CSCFeature?, Never> {
+        featureSubject.eraseToAnyPublisher()
+    }
 
     /// Merged per-peripheral derived sample (consumed by the manager for the merged `derivedUpdates` stream).
     public var derivedUpdates: AnyPublisher<CSCDerivedUpdate, Never> {
@@ -155,6 +162,7 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
         speedSubject.send(nil)
         cadenceSubject.send(nil)
         distanceDeltaSubject.send(nil)
+        featureSubject.send(nil)
     }
 
     public func didFailToConnect() {
@@ -183,7 +191,7 @@ extension CyclingSpeedAndCadenceSensor: @MainActor CBPeripheralDelegate {
         guard error == nil else { return }
         guard let services = peripheral.services else { return }
         for service in services where service.uuid == Self.cscServiceUUID {
-            peripheral.discoverCharacteristics([Self.cscMeasurementUUID], for: service)
+            peripheral.discoverCharacteristics([Self.cscMeasurementUUID, Self.cscFeatureUUID], for: service)
         }
     }
 
@@ -194,8 +202,15 @@ extension CyclingSpeedAndCadenceSensor: @MainActor CBPeripheralDelegate {
     ) {
         guard error == nil else { return }
         guard let characteristics = service.characteristics else { return }
-        for characteristic in characteristics where characteristic.uuid == Self.cscMeasurementUUID {
-            peripheral.setNotifyValue(true, for: characteristic)
+        for characteristic in characteristics {
+            switch characteristic.uuid {
+            case Self.cscMeasurementUUID:
+                peripheral.setNotifyValue(true, for: characteristic)
+            case Self.cscFeatureUUID:
+                peripheral.readValue(for: characteristic)
+            default:
+                break
+            }
         }
     }
 
@@ -204,8 +219,15 @@ extension CyclingSpeedAndCadenceSensor: @MainActor CBPeripheralDelegate {
         didUpdateValueFor characteristic: CBCharacteristic,
         error: Error?
     ) {
-        guard error == nil, characteristic.uuid == Self.cscMeasurementUUID, let data = characteristic.value else { return }
-        processCSCData(data)
+        guard error == nil, let data = characteristic.value else { return }
+        switch characteristic.uuid {
+        case Self.cscMeasurementUUID:
+            processCSCData(data)
+        case Self.cscFeatureUUID:
+            featureSubject.send(CSCFeature.parse(data))
+        default:
+            break
+        }
     }
 }
 
@@ -216,4 +238,13 @@ extension CyclingSpeedAndCadenceSensor {
     internal func _test_ingestCSCMeasurementData(_ data: Data) {
         processCSCData(data)
     }
+
+    /// Sets parsed CSC Feature (tests / composition root helpers).
+    internal func _test_setFeature(_ feature: CSCFeature?) {
+        featureSubject.send(feature)
+    }
+
+    internal var _test_featureSnapshot: CSCFeature? { featureSubject.value }
+
+    internal var _test_connectionSnapshot: ConnectionState { connectionStateSubject.value }
 }

@@ -4,9 +4,14 @@
 //
 
 import Combine
+import CombineSchedulers
 import Foundation
 
 /// Picks the highest-priority ``AnyMetric`` that is currently available; falls back when that source stalls or disconnects.
+///
+/// When initialized with a ``tick`` publisher (e.g. ``TimeService/timePulse`` mapped to `Void`), the selector re-emits the
+/// latest measurement for the active source on each tick while that source is available and has produced at least one value.
+/// This satisfies **MET-GEN-3** (≥1 Hz while a source is active). Values are replayed verbatim; a future staleness timeout is out of scope here.
 public final class PrioritizedMetricSelector<U: Dimension>: Metric, @unchecked Sendable {
     public typealias UnitType = U
 
@@ -16,9 +21,12 @@ public final class PrioritizedMetricSelector<U: Dimension>: Metric, @unchecked S
     public let activeSourceIndex: AnyPublisher<Int?, Never>
 
     private let state: SelectorState<U>?
+    private var cancellables = Set<AnyCancellable>()
 
-    /// - Parameter sources: Highest priority first.
-    public init(sources: [AnyMetric<U>]) {
+    /// - Parameters:
+    ///   - sources: Highest priority first.
+    ///   - scheduler: Queue used for child metric streams and tick delivery (default main queue for UI).
+    public init(sources: [AnyMetric<U>], scheduler: AnySchedulerOf<DispatchQueue> = .main) {
         guard !sources.isEmpty else {
             state = nil
             publisher = Empty<Measurement<U>, Never>().eraseToAnyPublisher()
@@ -33,20 +41,65 @@ public final class PrioritizedMetricSelector<U: Dimension>: Metric, @unchecked S
         isAvailable = st.anySourceAvailable.removeDuplicates().eraseToAnyPublisher()
         activeSourceIndex = st.activeIndex.removeDuplicates().eraseToAnyPublisher()
 
+        wireChildSources(st, sources: sources, scheduler: scheduler)
+    }
+
+    /// - Parameters:
+    ///   - sources: Highest priority first.
+    ///   - tick: Pulse used to re-emit the active source’s latest value (**MET-GEN-3**).
+    ///   - scheduler: Queue used for child metric streams and tick delivery (default main queue for UI).
+    public init(
+        sources: [AnyMetric<U>],
+        tick: AnyPublisher<Void, Never>,
+        scheduler: AnySchedulerOf<DispatchQueue> = .main
+    ) {
+        guard !sources.isEmpty else {
+            state = nil
+            publisher = Empty<Measurement<U>, Never>().eraseToAnyPublisher()
+            isAvailable = Just(false).eraseToAnyPublisher()
+            activeSourceIndex = Just(nil).eraseToAnyPublisher()
+            return
+        }
+
+        let st = SelectorState<U>(sourceCount: sources.count)
+        state = st
+        publisher = st.output.eraseToAnyPublisher()
+        isAvailable = st.anySourceAvailable.removeDuplicates().eraseToAnyPublisher()
+        activeSourceIndex = st.activeIndex.removeDuplicates().eraseToAnyPublisher()
+
+        wireChildSources(st, sources: sources, scheduler: scheduler)
+
+        // Ticks are not routed through `scheduler`: they only read/write `SelectorState` under `NSLock`
+        // and must not reorder ahead of initial `receive(on:)` deliveries from child metrics (which would
+        // emit before the dashboard `sink` attaches and drop samples on this `PassthroughSubject`).
+        tick
+            .sink { [st] in
+                st.receiveTick()
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Subscriptions live on ``PrioritizedMetricSelector`` (not ``SelectorState``) so sinks can retain
+    /// ``SelectorState`` strongly without a retain cycle (`SelectorState` no longer owns the cancellables bag).
+    private func wireChildSources(
+        _ st: SelectorState<U>,
+        sources: [AnyMetric<U>],
+        scheduler: AnySchedulerOf<DispatchQueue>
+    ) {
         for (index, source) in sources.enumerated() {
             source.publisher
-                .receive(on: DispatchQueue.main)
-                .sink { [weak st] measurement in
-                    st?.receiveMeasurement(index: index, value: measurement)
+                .receive(on: scheduler)
+                .sink { [st] measurement in
+                    st.receiveMeasurement(index: index, value: measurement)
                 }
-                .store(in: &st.cancellables)
+                .store(in: &cancellables)
 
             source.isAvailable
-                .receive(on: DispatchQueue.main)
-                .sink { [weak st] available in
-                    st?.receiveAvailability(index: index, available: available)
+                .receive(on: scheduler)
+                .sink { [st] available in
+                    st.receiveAvailability(index: index, available: available)
                 }
-                .store(in: &st.cancellables)
+                .store(in: &cancellables)
         }
     }
 }
@@ -63,8 +116,6 @@ private final class SelectorState<U: Dimension>: @unchecked Sendable {
     let output = PassthroughSubject<Measurement<U>, Never>()
     let activeIndex = CurrentValueSubject<Int?, Never>(nil)
     let anySourceAvailable = CurrentValueSubject<Bool, Never>(false)
-
-    var cancellables = Set<AnyCancellable>()
 
     init(sourceCount: Int) {
         latestValues = Array(repeating: nil, count: sourceCount)
@@ -105,5 +156,14 @@ private final class SelectorState<U: Dimension>: @unchecked Sendable {
         if let cached = cachedAfterSwitch {
             output.send(cached)
         }
+    }
+
+    func receiveTick() {
+        lock.lock()
+        let idx = currentActiveIndex
+        let cached = idx.flatMap { latestValues[$0] }
+        lock.unlock()
+        guard let measurement = cached else { return }
+        output.send(measurement)
     }
 }

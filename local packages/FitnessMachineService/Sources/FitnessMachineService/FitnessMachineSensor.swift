@@ -168,4 +168,15 @@ extension FitnessMachineSensor {
     internal func _test_ingestIndoorBikeData(_ data: Data) {
         processIndoorBikeData(data)
     }
+
+    /// Includes `nil` when disconnected or not yet received (unlike ``speed`` / ``cadence``, which use `compactMap`).
+    internal var speedOptional: AnyPublisher<Measurement<UnitSpeed>?, Never> {
+        speedSubject.eraseToAnyPublisher()
+    }
+
+    internal var cadenceOptional: AnyPublisher<Measurement<UnitFrequency>?, Never> {
+        cadenceSubject.eraseToAnyPublisher()
+    }
+
+    internal var _test_connectionSnapshot: ConnectionState { connectionStateSubject.value }
 }

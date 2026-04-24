@@ -136,6 +136,33 @@ struct CyclingSpeedAndCadenceSensorManagerTests {
         #expect(p.records.contains(where: { $0.id == id && $0.isEnabled == false }))
     }
 
+    @Test func dualCapableSensor_nilWhenNoDualCapableFeature() {
+        let m = CyclingSpeedAndCadenceSensorManager(persistence: InMemoryCSCPersistence())
+        let a = makeSensor(id: UUID(), name: "A", connected: true)
+        a._test_setFeature(CSCFeature(supportsWheel: true, supportsCrank: false))
+        m._test_registerSensor(a)
+        var last: UUID?
+        let c = m.dualCapableSensor.sink { last = $0 }
+        _ = c
+        #expect(last == nil)
+    }
+
+    @Test func dualCapableSensor_emitsLexFirstAmongConnectedDualCapable() {
+        let m = CyclingSpeedAndCadenceSensorManager(persistence: InMemoryCSCPersistence())
+        let idLo = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        let idHi = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+        let a = makeSensor(id: idLo, name: "A", connected: true)
+        let b = makeSensor(id: idHi, name: "B", connected: true)
+        a._test_setFeature(CSCFeature(supportsWheel: true, supportsCrank: true))
+        b._test_setFeature(CSCFeature(supportsWheel: true, supportsCrank: true))
+        m._test_registerSensor(b)
+        m._test_registerSensor(a)
+        var last: UUID?
+        let c = m.dualCapableSensor.sink { last = $0 }
+        _ = c
+        #expect(last == idLo)
+    }
+
     private func makeSensor(
         id: UUID,
         name: String,
