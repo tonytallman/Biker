@@ -56,4 +56,30 @@ extension SensorAvailability {
         let provider = PreviewSensorProvider()
         return Just(SensorAvailability.available(provider)).eraseToAnyPublisher()
     }
+
+    /// All distinct `SensorAvailability` gating values for SwiftUI previews (ADR-0009).
+    public enum PreviewCase: String, CaseIterable, Sendable {
+        case notDetermined
+        case denied
+        case restricted
+        case unsupported
+        case resetting
+        case poweredOff
+        case available
+    }
+
+    /// A single-emission stream for a given gating value (``PreviewCase/available`` uses ``PreviewSensorProvider``).
+    @MainActor
+    public static func previewStream(_ scenario: PreviewCase) -> AnyPublisher<SensorAvailability, Never> {
+        let provider = PreviewSensorProvider()
+        switch scenario {
+        case .notDetermined: return Just(.notDetermined).eraseToAnyPublisher()
+        case .denied: return Just(.denied).eraseToAnyPublisher()
+        case .restricted: return Just(.restricted).eraseToAnyPublisher()
+        case .unsupported: return Just(.unsupported).eraseToAnyPublisher()
+        case .resetting: return Just(.resetting).eraseToAnyPublisher()
+        case .poweredOff: return Just(.poweredOff).eraseToAnyPublisher()
+        case .available: return Just(.available(provider)).eraseToAnyPublisher()
+        }
+    }
 }

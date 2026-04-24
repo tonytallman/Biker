@@ -22,8 +22,6 @@ struct SettingsViewModelTests {
     let mockSensorAvailability: MockSensorAvailability
     let viewModel: SettingsVM.SettingsViewModel
 
-    var mockSensorProvider: MockSensorProvider { mockSensorAvailability.provider }
-
     init() {
         let storage = InMemorySettingsStorage()
         metricsSettings = DefaultMetricsSettings(storage: storage)
@@ -131,28 +129,6 @@ struct SettingsViewModelTests {
         #expect(viewModel.bluetoothBackgroundStatusText == "Allowed")
     }
 
-    @Test("Sensors section defaults are exposed")
-    func testSensorsSectionDefaultsAreExposed() {
-        #expect(viewModel.knownSensors.isEmpty)
-    }
-
-    @Test("Scan for sensors does not change known sensor list")
-    func testScanForSensorsDoesNotChangeKnownList() {
-        let id = UUID()
-        let sensor: any Sensor = MockPlainSensor(
-            id: id,
-            name: "Speed Sensor",
-            type: .cyclingSpeedAndCadence,
-            connectionState: .disconnected
-        )
-        mockSensorProvider.setKnownSensors([sensor])
-        #expect(viewModel.knownSensors.map(\.title) == ["Speed Sensor"])
-
-        viewModel.scanForSensors()
-
-        #expect(viewModel.knownSensors.map(\.title) == ["Speed Sensor"])
-        #expect(mockSensorProvider.scanCallCount == 1)
-    }
     
     @Test("Open location permissions delegates to location permissions settings")
     func testOpenLocationPermissionsDelegatesToLocationPermissionsSettings() {

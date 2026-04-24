@@ -15,7 +15,8 @@ package final class SensorViewModel {
     package var connectionState: SensorConnectionState
     package var isEnabled: Bool
 
-    private var sensor: any Sensor
+    /// The current ``Sensor`` from the app’s sensor provider (same id until replaced).
+    package var sensor: any Sensor
     private var cancellables = Set<AnyCancellable>()
 
     package init(sensor: any Sensor) {
