@@ -16,9 +16,12 @@ open class SettingsViewModel {
 
     private let metricsSettings: SettingsViewModel.MetricsSettings
     private let systemSettings: SettingsViewModel.SystemSettings
-    private let sensorProvider: any SensorProvider
+    private let sensorAvailabilityPublisher: AnyPublisher<SensorAvailability, Never>
     private var cancellables: Set<AnyCancellable> = []
+    private var providerCancellables: Set<AnyCancellable> = []
     private var knownSensorViewModels: [UUID: SensorViewModel] = [:]
+    private var lastWiredProvider: AnyObject?
+    private var priorEmissionWasAvailable = false
 
     package var currentSpeedUnits: UnitSpeed = .milesPerHour
     package var currentDistanceUnits: UnitLength = .miles
@@ -26,8 +29,10 @@ open class SettingsViewModel {
     package var locationBackgroundStatusText: String = ""
     package var bluetoothBackgroundStatusText: String = ""
     package var knownSensors: [SensorViewModel] = []
-    /// Current `SensorProvider` Bluetooth availability (ADR-0007 / Phase 04).
-    package var bluetoothAvailability: BluetoothAvailability = .notDetermined
+    /// Current gating of sensor lists and the ``SensorProvider`` (ADR-0009).
+    package var currentSensorAvailability: SensorAvailability = .notDetermined
+    /// Set when `SensorAvailability` transitions from ``SensorAvailability/available(_:)`` to a non-ready case while the scan sheet may be open (SEN-SCAN-3).
+    package var shouldDismissScanSheet: Bool = false
 
     package let availableSpeedUnits: [UnitSpeed] = [.milesPerHour, .kilometersPerHour]
     package let availableDistanceUnits: [UnitLength] = [.miles, .kilometers]
@@ -37,11 +42,11 @@ open class SettingsViewModel {
     public init(
         metricsSettings: SettingsViewModel.MetricsSettings,
         systemSettings: SettingsViewModel.SystemSettings,
-        sensorProvider: any SensorProvider
+        sensorAvailability: AnyPublisher<SensorAvailability, Never>
     ) {
         self.metricsSettings = metricsSettings
         self.systemSettings = systemSettings
-        self.sensorProvider = sensorProvider
+        self.sensorAvailabilityPublisher = sensorAvailability
 
         // Subscribe to settings changes
         metricsSettings.speedUnits
@@ -84,22 +89,44 @@ open class SettingsViewModel {
         // Initial refresh of background statuses
         refreshBackgroundStatuses()
 
-        sensorProvider.knownSensors
-            .sink { [weak self] sensors in
-                self?.reconcileKnownSensors(sensors)
-            }
-            .store(in: &cancellables)
-
-        sensorProvider.bluetoothAvailability
+        sensorAvailabilityPublisher
             .removeDuplicates()
-            .sink { [weak self] availability in
-                self?.bluetoothAvailability = availability
+            .sink { [weak self] value in
+                self?.applySensorAvailability(value)
             }
             .store(in: &cancellables)
     }
 
     package var sensorsSectionState: SensorsSectionState {
-        bluetoothAvailability.sensorsSectionState
+        currentSensorAvailability.sensorsSectionState
+    }
+
+    private func applySensorAvailability(_ value: SensorAvailability) {
+        let nowAvailable: Bool
+        if case .available = value { nowAvailable = true } else { nowAvailable = false }
+        if priorEmissionWasAvailable, !nowAvailable {
+            shouldDismissScanSheet = true
+        }
+        priorEmissionWasAvailable = nowAvailable
+        currentSensorAvailability = value
+
+        if case .available(let p) = value, (p as AnyObject) === lastWiredProvider {
+            return
+        }
+
+        providerCancellables.removeAll(keepingCapacity: true)
+        knownSensorViewModels.removeAll(keepingCapacity: true)
+        knownSensors = []
+        lastWiredProvider = nil
+
+        if case .available(let p) = value {
+            lastWiredProvider = p as AnyObject
+            p.knownSensors
+                .sink { [weak self] sensors in
+                    self?.reconcileKnownSensors(sensors)
+                }
+                .store(in: &providerCancellables)
+        }
     }
 
     private func reconcileKnownSensors(_ sensors: [any Sensor]) {
@@ -153,12 +180,21 @@ open class SettingsViewModel {
     }
 
     package func scanForSensors() {
-        guard bluetoothAvailability == .poweredOn else { return }
-        sensorProvider.scan()
+        if case .available(let p) = currentSensorAvailability {
+            p.scan()
+        }
     }
 
-    package func makeScanViewModel() -> ScanViewModel {
-        ScanViewModel(sensorProvider: sensorProvider)
+    package func makeScanViewModel() -> ScanViewModel? {
+        if case .available(let p) = currentSensorAvailability {
+            return ScanViewModel(sensorProvider: p)
+        }
+        return nil
+    }
+
+    /// Call after the scan sheet has performed `dismiss()` in response to `shouldDismissScanSheet`.
+    package func acknowledgeScanSheetDismissal() {
+        shouldDismissScanSheet = false
     }
 
     package func disconnectSensor(id: UUID) {

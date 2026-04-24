@@ -12,14 +12,9 @@ import Observation
 package final class ScanViewModel {
     package var discoveredSensors: [DiscoveredSensorRowViewModel] = []
     package var isScanning: Bool = false
-    /// True when `BluetoothAvailability` allows scanning (`.poweredOn`).
-    package var isBluetoothScanAllowed: Bool = true
-    /// Set when availability transitions from `.poweredOn` to another value while the sheet may be open (SEN-SCAN-3).
-    package var shouldDismissScanSheet: Bool = false
 
     private let sensorProvider: any SensorProvider
     private var cancellables: Set<AnyCancellable> = []
-    private var lastBluetoothAvailability: BluetoothAvailability?
 
     package init(sensorProvider: any SensorProvider) {
         self.sensorProvider = sensorProvider
@@ -31,38 +26,14 @@ package final class ScanViewModel {
                 self?.rebuildRows(from: sensors)
             }
             .store(in: &cancellables)
-
-        sensorProvider.bluetoothAvailability
-            .removeDuplicates()
-            .sink { [weak self] availability in
-                self?.applyBluetoothAvailability(availability)
-            }
-            .store(in: &cancellables)
     }
 
-    private func applyBluetoothAvailability(_ availability: BluetoothAvailability) {
-        let wasPoweredOn = lastBluetoothAvailability == .poweredOn
-        let isPoweredOn = availability == .poweredOn
-        lastBluetoothAvailability = availability
-
-        isBluetoothScanAllowed = isPoweredOn
-        if !isPoweredOn {
-            stopScan()
-        }
-        if wasPoweredOn && !isPoweredOn {
-            shouldDismissScanSheet = true
-        }
-    }
-
+    /// Preserves `SensorProvider` order — global scan ordering (SEN-SCAN-7/8) is applied in `CompositeSensorProvider`.
     private func rebuildRows(from sensors: [any Sensor]) {
-        let sorted = sensors.sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
-        discoveredSensors = sorted.map { DiscoveredSensorRowViewModel(sensor: $0) }
+        discoveredSensors = sensors.map { DiscoveredSensorRowViewModel(sensor: $0) }
     }
 
     package func startScan() {
-        guard isBluetoothScanAllowed else { return }
         isScanning = true
         sensorProvider.scan()
     }
@@ -77,10 +48,5 @@ package final class ScanViewModel {
             row.connect()
         }
         stopScan()
-    }
-
-    /// Call after the scan sheet has performed `dismiss()` in response to `shouldDismissScanSheet`.
-    package func acknowledgeScanSheetDismissal() {
-        shouldDismissScanSheet = false
     }
 }

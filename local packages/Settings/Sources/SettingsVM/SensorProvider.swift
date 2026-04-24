@@ -11,7 +11,6 @@ import Foundation
 public protocol SensorProvider {
     var knownSensors: AnyPublisher<[any Sensor], Never> { get }
     var discoveredSensors: AnyPublisher<[any Sensor], Never> { get }
-    var bluetoothAvailability: AnyPublisher<BluetoothAvailability, Never> { get }
     func scan()
     func stopScan()
 }

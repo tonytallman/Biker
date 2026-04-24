@@ -337,7 +337,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Turn on Bluetooth to scan and connect. Known sensors stay listed; they will show as disconnected until Bluetooth is on."
+            "value" : "Turn on Bluetooth to see your devices and discover new ones."
           }
         }
       }

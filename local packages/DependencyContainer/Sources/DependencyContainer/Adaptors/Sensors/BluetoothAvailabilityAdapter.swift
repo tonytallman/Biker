@@ -2,7 +2,7 @@
 //  BluetoothAvailabilityAdapter.swift
 //  DependencyContainer
 //
-//  TODO(phase-05): Replaced by `CompositeSensorProvider`'s multi-manager reducer at the composition root.
+//  1:1 map from `CSCBluetoothAvailability` to `SettingsVM.BluetoothAvailability` at the composition root (ADR-0009).
 
 import Combine
 import CyclingSpeedAndCadenceService

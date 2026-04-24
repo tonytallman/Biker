@@ -42,7 +42,11 @@ let package = Package(
         ),
         .testTarget(
             name: "DependencyContainerTests",
-            dependencies: ["DependencyContainer"]
+            dependencies: [
+                "DependencyContainer",
+                "CyclingSpeedAndCadenceService",
+                .product(name: "SettingsVM", package: "Settings"),
+            ]
         ),
     ]
 )

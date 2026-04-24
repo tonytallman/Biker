@@ -27,8 +27,8 @@
   - the UI shall transition to the state described in `SEN-PERM-1`.
 - `SEN-PERM-3` If Bluetooth permission is granted but the Bluetooth radio is powered off:
   - the Sensors section shall remain visible,
-  - the scan affordance shall be disabled,
-  - the known-sensor list shall be displayed with all entries shown as disconnected,
+  - the software shall not display the known-sensor list or a discovered-sensor list (iOS Settings parity: “My devices” and “Other devices” are hidden when Bluetooth is off),
+  - the scan affordance shall be disabled or not shown,
   - the software shall not attempt to auto-connect, and
   - the section shall display an indication that Bluetooth is off.
 - `SEN-PERM-4` The permission-not-granted message defined in `SEN-PERM-1` shall take precedence over the Bluetooth-off indication defined in `SEN-PERM-3`.

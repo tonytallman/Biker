@@ -128,28 +128,9 @@ public struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Sensors.Bluetooth.Off.Title", bundle: .settingsStrings, comment: "Title when Bluetooth radio is off or unavailable")
                                         .font(.headline)
-                                    Text("Sensors.Bluetooth.Off.Body", bundle: .settingsStrings, comment: "Explains that known sensors are listed but disconnected while Bluetooth is off")
+                                    Text("Sensors.Bluetooth.Off.Body", bundle: .settingsStrings, comment: "Explains that sensor lists are hidden until Bluetooth is on (iOS Settings parity)")
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
-                                }
-                            }
-                        }
-                        ForEach(viewModel.knownSensors, id: \.sensorID) { sensor in
-                            HStack {
-                                Text(sensor.title)
-                                Spacer()
-                                Text(SensorConnectionState.disconnected.localizedStatusText)
-                                    .foregroundStyle(.secondary)
-                                    .font(.caption)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    viewModel.forgetSensor(id: sensor.sensorID)
-                                } label: {
-                                    Label(
-                                        String(localized: "Forget", bundle: .settingsStrings, comment: "Remove a known BLE sensor from the list"),
-                                        systemImage: "trash"
-                                    )
                                 }
                             }
                         }
@@ -211,7 +192,17 @@ public struct SettingsView: View {
             viewModel.refreshBackgroundStatuses()
         }
         .sheet(isPresented: $showingScanSheet) {
-            ScanView(viewModel: viewModel.makeScanViewModel())
+            Group {
+                if let scanVM = viewModel.makeScanViewModel() {
+                    ScanView(viewModel: scanVM)
+                }
+            }
+        }
+        .onChange(of: viewModel.shouldDismissScanSheet) { _, should in
+            if should {
+                showingScanSheet = false
+                viewModel.acknowledgeScanSheetDismissal()
+            }
         }
     }
     
@@ -228,7 +219,7 @@ public struct SettingsView: View {
         viewModel: SettingsViewModel(
             metricsSettings: DefaultMetricsSettings(storage: storage),
             systemSettings: DefaultSystemSettings(storage: storage),
-            sensorProvider: PreviewSensorProvider(),
+            sensorAvailability: SensorAvailability.preview
         )
     )
 }

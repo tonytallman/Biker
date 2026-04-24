@@ -11,7 +11,7 @@ import SettingsVM
 @MainActor
 final class SettingsDependencies {
     private let systemSettings: SettingsViewModel.SystemSettings
-    private let sensorProvider: any SensorProvider
+    private let compositeSensorProvider: CompositeSensorProvider
     let bluetoothSensorManager: CyclingSpeedAndCadenceSensorManager
     let metricsSettings: DefaultMetricsSettings
 
@@ -26,16 +26,21 @@ final class SettingsDependencies {
         )
         bluetoothSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.bluetoothSensorManager = bluetoothSensorManager
-        sensorProvider = BluetoothSensorProviderAdapter(
-            manager: bluetoothSensorManager
+        let cscSensorProvider = CSCSensorProvider(manager: bluetoothSensorManager)
+        let systemAvailability = BluetoothAvailabilityAdapter.publisher(
+            source: bluetoothSensorManager.bluetoothAvailability
+        )
+        compositeSensorProvider = CompositeSensorProvider(
+            sensorProviders: [cscSensorProvider],
+            systemAvailability: systemAvailability,
         )
     }
-    
+
     func getSettingsViewModel() -> SettingsViewModel {
         SettingsVM.SettingsViewModel(
             metricsSettings: metricsSettings,
             systemSettings: systemSettings,
-            sensorProvider: sensorProvider,
+            sensorAvailability: compositeSensorProvider.availability
         )
     }
 }

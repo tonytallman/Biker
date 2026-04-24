@@ -19,9 +19,11 @@ struct SettingsViewModelTests {
     let mockBluetoothPermissions: MockBluetoothPermissionsSettings
     let mockSystemSettingsNavigator: MockSystemSettingsNavigator
     let mockForegroundNotifier: MockForegroundNotifier
-    let mockSensorProvider: MockSensorProvider
+    let mockSensorAvailability: MockSensorAvailability
     let viewModel: SettingsVM.SettingsViewModel
-    
+
+    var mockSensorProvider: MockSensorProvider { mockSensorAvailability.provider }
+
     init() {
         let storage = InMemorySettingsStorage()
         metricsSettings = DefaultMetricsSettings(storage: storage)
@@ -31,7 +33,7 @@ struct SettingsViewModelTests {
         mockBluetoothPermissions = MockBluetoothPermissionsSettings()
         mockSystemSettingsNavigator = MockSystemSettingsNavigator()
         mockForegroundNotifier = MockForegroundNotifier()
-        mockSensorProvider = MockSensorProvider()
+        mockSensorAvailability = MockSensorAvailability(initialBluetooth: .poweredOn)
         systemSettings = DefaultSystemSettings(
             storage: storage,
             bluetoothPermissionsSettings: mockBluetoothPermissions,
@@ -44,7 +46,7 @@ struct SettingsViewModelTests {
         viewModel = SettingsVM.SettingsViewModel(
             metricsSettings: metricsSettings,
             systemSettings: systemSettings,
-            sensorProvider: mockSensorProvider,
+            sensorAvailability: mockSensorAvailability.publisher
         )
     }
     

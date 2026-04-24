@@ -11,7 +11,6 @@ import Foundation
 public struct PreviewSensorProvider: SensorProvider {
     public var knownSensors: AnyPublisher<[any Sensor], Never>
     public var discoveredSensors: AnyPublisher<[any Sensor], Never>
-    public var bluetoothAvailability: AnyPublisher<BluetoothAvailability, Never>
 
     public init() {
         let id1 = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
@@ -43,10 +42,18 @@ public struct PreviewSensorProvider: SensorProvider {
         )
         knownSensors = Just([k1, k2]).eraseToAnyPublisher()
         discoveredSensors = Just([d1, d2]).eraseToAnyPublisher()
-        bluetoothAvailability = Just(.poweredOn).eraseToAnyPublisher()
     }
 
     public func scan() {}
 
     public func stopScan() {}
+}
+
+extension SensorAvailability {
+    /// Preview-only: Bluetooth ready with stubbed known/discovered data.
+    @MainActor
+    public static var preview: AnyPublisher<SensorAvailability, Never> {
+        let provider = PreviewSensorProvider()
+        return Just(SensorAvailability.available(provider)).eraseToAnyPublisher()
+    }
 }

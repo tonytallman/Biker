@@ -14,16 +14,3 @@ public enum SensorsSectionState: Sendable, Equatable {
     /// Normal list, scan + when `.poweredOn` (SEN-PERM-5 when permission granted and radio on).
     case normal
 }
-
-extension BluetoothAvailability {
-    public var sensorsSectionState: SensorsSectionState {
-        switch self {
-        case .notDetermined, .denied, .restricted:
-            return .permissionBlocked
-        case .unsupported, .resetting, .poweredOff:
-            return .bluetoothUnavailable
-        case .poweredOn:
-            return .normal
-        }
-    }
-}

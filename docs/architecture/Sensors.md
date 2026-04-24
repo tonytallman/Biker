@@ -12,7 +12,8 @@ This document describes the **target** architecture for Bluetooth sensors, Setti
 | [0004](../adr/0004-composite-sensor-provider-at-composition-root.md) | `CompositeSensorProvider` at the composition root |
 | [0005](../adr/0005-per-manager-persistence-stores.md) | Per-manager persistence stores |
 | [0006](../adr/0006-metric-source-selection-at-app-level.md) | Metric source selection at the app level |
-| [0007](../adr/0007-bluetooth-availability-as-first-class-state.md) | `BluetoothAvailability` as first-class state |
+| [0007](../adr/0007-bluetooth-availability-as-first-class-state.md) | `BluetoothAvailability` as first-class state (superseded) |
+| [0009](../adr/0009-sensor-availability-sum-type.md) | `SensorAvailability` sum type and system-wide radio state |
 | [0008](../adr/0008-no-singletons-for-sensor-managers.md) | No singletons for sensor managers |
 
 ## Module map
@@ -20,7 +21,7 @@ This document describes the **target** architecture for Bluetooth sensors, Setti
 ```mermaid
 flowchart LR
     SettingsUI --> SettingsVM
-    SettingsVM -->|Sensor, SensorProvider, WheelDiameterAdjustable, BluetoothAvailability| Composite["CompositeSensorProvider (DependencyContainer)"]
+    SettingsVM -->|Sensor, SensorProvider, SensorAvailability, WheelDiameterAdjustable| Composite["CompositeSensorProvider (DependencyContainer)"]
     Composite --> CSC[CyclingSpeedAndCadenceSensorManager]
     Composite --> FTMS[FitnessMachineSensorManager]
     Composite --> HR[HeartRateSensorManager]
@@ -35,7 +36,7 @@ flowchart LR
 ```
 
 - **SettingsUI** — SwiftUI; depends on `SettingsVM` and `DesignSystem`.
-- **SettingsVM** — Defines `Sensor`, `SensorProvider`, optional capability protocols (e.g. `WheelDiameterAdjustable`), and `BluetoothAvailability`-driven UI state. No imports of sensor implementation packages (per [local package independence](../../.cursor/rules/package-independence.mdc)).
+- **SettingsVM** — Defines `Sensor`, `SensorProvider`, `SensorAvailability` (sum type wrapping a provider when the system radio allows sensor use), optional capability protocols (e.g. `WheelDiameterAdjustable`), and the raw `BluetoothAvailability` type used only in composition. No imports of sensor implementation packages (per [local package independence](../../.cursor/rules/package-independence.mdc)).
 - **DependencyContainer** — Constructs managers, the composite provider, metric adapters, and `PrioritizedMetricSelector` wiring.
 - **Per-type packages** — `CyclingSpeedAndCadenceService` (or successor), FTMS package, Heart Rate package: each owns BLE for that family, persistence for that family, and exposes metrics to `DependencyContainer`.
 
@@ -50,7 +51,7 @@ flowchart LR
 | User-editable wheel diameter (CSCS only) | `CyclingSpeedAndCadenceSensor` + persistence ([ADR-0005](../adr/0005-per-manager-persistence-stores.md), [ADR-0002](../adr/0002-per-sensor-capability-protocols.md)) |
 | Known-sensor list merge, scan ordering | `CompositeSensorProvider` ([ADR-0004](../adr/0004-composite-sensor-provider-at-composition-root.md)) |
 | Cross-type metric priority (CSC vs FTMS vs GPS, etc.) | `PrioritizedMetricSelector` in app composition ([ADR-0006](../adr/0006-metric-source-selection-at-app-level.md)) |
-| Bluetooth permission vs power vs UI gating | `SensorProvider.bluetoothAvailability` + Settings ([ADR-0007](../adr/0007-bluetooth-availability-as-first-class-state.md)) |
+| Bluetooth permission vs power vs UI gating | `AnyPublisher<SensorAvailability, Never>` at `SettingsViewModel` + one system `BluetoothAvailability` source at the composition root ([ADR-0009](../adr/0009-sensor-availability-sum-type.md)) |
 | Object lifetime / wiring | `DependencyContainer` ([ADR-0008](../adr/0008-no-singletons-for-sensor-managers.md)) |
 
 ## Key protocols (pointers)
@@ -58,9 +59,10 @@ flowchart LR
 These will be defined in Swift (target TBD, likely `SettingsVM` for consumer-facing abstractions):
 
 - `Sensor` — identity, human-readable name, `SensorType`, connection state, enabled state, connect/disconnect/forget.
-- `SensorProvider` — merged known and discovered streams, scan control, `bluetoothAvailability`.
+- `SensorProvider` — merged known and discovered streams, scan control; **only** reachable inside `SensorAvailability.available` for Settings.
+- `SensorAvailability` — sum of non-ready radio/permission cases plus `case available(any SensorProvider)` ([ADR-0009](../adr/0009-sensor-availability-sum-type.md)).
 - `WheelDiameterAdjustable: Sensor` — wheel diameter stream and setter; only CSC sensors conform ([ADR-0002](../adr/0002-per-sensor-capability-protocols.md)).
-- `BluetoothAvailability` — enum or struct reduced from `CBManagerState` + authorization where needed ([ADR-0007](../adr/0007-bluetooth-availability-as-first-class-state.md)).
+- `BluetoothAvailability` — raw state mapped from `CBCentralManager` for the composition root; not exposed in parallel on `SensorProvider` ([ADR-0009](../adr/0009-sensor-availability-sum-type.md)).
 
 The Swift files are the source of truth for exact signatures.
 

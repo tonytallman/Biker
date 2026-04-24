@@ -11,8 +11,8 @@ import SettingsVM
 @MainActor
 @Suite("Scan list (SensorProvider)")
 struct ScanListTests {
-    @Test("Discovered rows sort by name case-insensitive ascending")
-    func testDiscoveredSortOrder() {
+    @Test("Discovered rows preserve SensorProvider order (ordering is owned by CompositeSensorProvider)")
+    func testDiscoveredPreservesProviderOrder() {
         let mock = MockSensorProvider()
         let id1 = UUID()
         let id2 = UUID()
@@ -31,7 +31,7 @@ struct ScanListTests {
         mock.setDiscoveredSensors([z, a])
 
         let scanVM = ScanViewModel(sensorProvider: mock)
-        #expect(scanVM.discoveredSensors.map(\.name) == ["alpha", "Zebra"])
+        #expect(scanVM.discoveredSensors.map(\.name) == ["Zebra", "alpha"])
     }
 
     @Test("connect invokes sensor connect and stops scanning")

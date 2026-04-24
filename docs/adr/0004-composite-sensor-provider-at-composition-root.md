@@ -17,7 +17,7 @@ Settings needs a **single** list of known sensors and a **single** list of disco
 
 3. **Individual manager packages** do not depend on each other; they do not know about the composite.
 
-4. The composite may also reduce **`bluetoothAvailability`** from managers per [7. BluetoothAvailability as first-class state](0007-bluetooth-availability-as-first-class-state.md), and it receives injected manager instances per [8. No singletons for sensor managers](0008-no-singletons-for-sensor-managers.md).
+4. The composite **does not** reduce multiple `bluetoothAvailability` streams from participants; the composition root provides **one** `BluetoothAvailability` stream (see [9. `SensorAvailability` sum type and system-wide radio state](0009-sensor-availability-sum-type.md)). The composite maps that to **`SensorAvailability`** (e.g. `.available(self)` when the radio is powered on). The composite still receives injected manager instances per [8. No singletons for sensor managers](0008-no-singletons-for-sensor-managers.md).
 
 ## Consequences
 

@@ -1,8 +1,8 @@
 //
-//  BluetoothSensorProviderAdapter.swift
+//  CyclingSpeedAndCadenceSensorAdapter.swift
 //  DependencyContainer
 //
-//  TODO(phase-05): Replaced by `CompositeSensorProvider` at the composition root.
+//  Maps `CyclingSpeedAndCadenceSensorManager` + CSC types to `SettingsVM` sensor protocols.
 
 import Combine
 import CyclingSpeedAndCadenceService
@@ -10,92 +10,7 @@ import Foundation
 import SettingsVM
 
 @MainActor
-final class BluetoothSensorProviderAdapter: SensorProvider {
-    private let manager: CyclingSpeedAndCadenceSensorManager
-    private var knownAdapters: [UUID: CSCKnownSensorAdapter] = [:]
-    private var discoveredAdapters: [UUID: CSCDiscoveredSensorAdapter] = [:]
-
-    var knownSensors: AnyPublisher<[any Sensor], Never> {
-        manager.knownSensors
-            .map { [weak self] list -> [any Sensor] in
-                self?.reconcileKnown(list) ?? []
-            }
-            .eraseToAnyPublisher()
-    }
-
-    var discoveredSensors: AnyPublisher<[any Sensor], Never> {
-        manager.discoveredSensors
-            .map { [weak self] list -> [any Sensor] in
-                self?.reconcileDiscovered(list) ?? []
-            }
-            .eraseToAnyPublisher()
-    }
-
-    var bluetoothAvailability: AnyPublisher<BluetoothAvailability, Never> {
-        BluetoothAvailabilityAdapter.publisher(source: manager.bluetoothAvailability)
-    }
-
-    init(manager: CyclingSpeedAndCadenceSensorManager) {
-        self.manager = manager
-    }
-
-    func scan() {
-        manager.startScan()
-    }
-
-    func stopScan() {
-        manager.stopScan()
-    }
-
-    private func reconcileKnown(_ list: [ConnectedSensor]) -> [any Sensor] {
-        var seen = Set<UUID>()
-        for s in list {
-            seen.insert(s.id)
-        }
-        for id in knownAdapters.keys where !seen.contains(id) {
-            knownAdapters.removeValue(forKey: id)
-        }
-        return list.map { s in
-            let adapter: CSCKnownSensorAdapter
-            if let existing = knownAdapters[s.id] {
-                adapter = existing
-            } else {
-                let created = CSCKnownSensorAdapter(manager: manager, id: s.id)
-                knownAdapters[s.id] = created
-                adapter = created
-            }
-            adapter.update(from: s)
-            return adapter
-        }
-    }
-
-    private func reconcileDiscovered(_ list: [DiscoveredSensor]) -> [any Sensor] {
-        var seen = Set<UUID>()
-        for s in list {
-            seen.insert(s.id)
-        }
-        for id in discoveredAdapters.keys where !seen.contains(id) {
-            discoveredAdapters.removeValue(forKey: id)
-        }
-        return list.map { s in
-            let adapter: CSCDiscoveredSensorAdapter
-            if let existing = discoveredAdapters[s.id] {
-                adapter = existing
-            } else {
-                let created = CSCDiscoveredSensorAdapter(manager: manager, id: s.id)
-                discoveredAdapters[s.id] = created
-                adapter = created
-            }
-            adapter.update(from: s)
-            return adapter
-        }
-    }
-}
-
-// MARK: - Known CSC sensor
-
-@MainActor
-private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
+final class CyclingSpeedAndCadenceSensorAdapter: WheelDiameterAdjustable {
     private let manager: CyclingSpeedAndCadenceSensorManager
     private(set) var id: UUID
     private var storedName: String
@@ -125,7 +40,7 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
         if let csc = manager.cscSensor(for: id) {
             self.storedName = csc.name
             self.connectionStateSubject = CurrentValueSubject(
-                mapConnectionStateToSensorState(csc.connectedSensorSnapshot.connectionState)
+                mapCSCConnectionStateToSensorState(csc.connectedSensorSnapshot.connectionState)
             )
             self.wheelDiameterSubject = CurrentValueSubject(csc.currentWheelDiameter)
             self.isEnabledSubject = CurrentValueSubject(csc.isEnabledValue)
@@ -157,7 +72,7 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
     func update(from sensor: ConnectedSensor) {
         id = sensor.id
         storedName = sensor.name
-        connectionStateSubject.send(mapConnectionStateToSensorState(sensor.connectionState))
+        connectionStateSubject.send(mapCSCConnectionStateToSensorState(sensor.connectionState))
     }
 
     func connect() {
@@ -181,19 +96,10 @@ private final class CSCKnownSensorAdapter: WheelDiameterAdjustable {
     }
 }
 
-@MainActor
-private func mapConnectionStateToSensorState(_ s: ConnectionState) -> SensorConnectionState {
-    switch s {
-    case .disconnected: return .disconnected
-    case .connecting: return .connecting
-    case .connected: return .connected
-    }
-}
-
-// MARK: - Discovered CSC peripheral
+// MARK: - Discovered (scan) row
 
 @MainActor
-private final class CSCDiscoveredSensorAdapter: SignalStrengthReporting {
+final class CyclingSpeedAndCadenceDiscoveredSensorAdapter: SignalStrengthReporting {
     private let manager: CyclingSpeedAndCadenceSensorManager
     private(set) var id: UUID
     private var storedName: String
@@ -239,5 +145,13 @@ private final class CSCDiscoveredSensorAdapter: SignalStrengthReporting {
 
     func setEnabled(_ enabled: Bool) {
         isEnabledSubject.send(enabled)
+    }
+}
+
+func mapCSCConnectionStateToSensorState(_ s: ConnectionState) -> SensorConnectionState {
+    switch s {
+    case .disconnected: return .disconnected
+    case .connecting: return .connecting
+    case .connected: return .connected
     }
 }

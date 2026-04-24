@@ -1,9 +1,9 @@
 # 7. BluetoothAvailability as first-class state
 
-- **Status**: Accepted
+- **Status**: Superseded
 - **Date**: 2026-04-22
 - **Supersedes**: (none)
-- **Superseded by**: (none)
+- **Superseded by**: [9. SensorAvailability sum type and system-wide radio state](0009-sensor-availability-sum-type.md)
 
 ## Context
 

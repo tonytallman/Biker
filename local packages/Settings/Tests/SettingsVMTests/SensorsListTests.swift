@@ -14,7 +14,7 @@ struct SensorsListTests {
     @Test("SettingsViewModel maps known sensors from provider")
     func testKnownSensorsFromProvider() {
         let storage = InMemorySettingsStorage()
-        let mock = MockSensorProvider()
+        let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
         let id = UUID()
         let sensor: any Sensor = MockPlainSensor(
             id: id,
@@ -22,12 +22,12 @@ struct SensorsListTests {
             type: .cyclingSpeedAndCadence,
             connectionState: .disconnected
         )
-        mock.setKnownSensors([sensor])
+        mock.provider.setKnownSensors([sensor])
 
         let viewModel = SettingsViewModel(
             metricsSettings: DefaultMetricsSettings(storage: storage),
             systemSettings: DefaultSystemSettings(storage: storage),
-            sensorProvider: mock
+            sensorAvailability: mock.publisher
         )
 
         #expect(viewModel.knownSensors.count == 1)
@@ -38,7 +38,7 @@ struct SensorsListTests {
     @Test("Per-row connection state updates when mock sensor publishes")
     func testConnectionStateReactive() {
         let storage = InMemorySettingsStorage()
-        let mock = MockSensorProvider()
+        let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
         let id = UUID()
         let plain = MockPlainSensor(
             id: id,
@@ -46,12 +46,12 @@ struct SensorsListTests {
             type: .cyclingSpeedAndCadence,
             connectionState: .disconnected
         )
-        mock.setKnownSensors([plain])
+        mock.provider.setKnownSensors([plain])
 
         let viewModel = SettingsViewModel(
             metricsSettings: DefaultMetricsSettings(storage: storage),
             systemSettings: DefaultSystemSettings(storage: storage),
-            sensorProvider: mock
+            sensorAvailability: mock.publisher
         )
 
         #expect(viewModel.knownSensors.first?.connectionState == .disconnected)
@@ -66,19 +66,19 @@ struct SensorsListTests {
     @Test("disconnectSensor and forgetSensor forward to the mock sensor")
     func testDisconnectAndForgetForward() {
         let storage = InMemorySettingsStorage()
-        let mock = MockSensorProvider()
+        let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
         let id = UUID()
         let plain = MockPlainSensor(
             id: id,
             name: "Actionable",
             type: .cyclingSpeedAndCadence
         )
-        mock.setKnownSensors([plain])
+        mock.provider.setKnownSensors([plain])
 
         let viewModel = SettingsViewModel(
             metricsSettings: DefaultMetricsSettings(storage: storage),
             systemSettings: DefaultSystemSettings(storage: storage),
-            sensorProvider: mock
+            sensorAvailability: mock.publisher
         )
 
         viewModel.disconnectSensor(id: id)
