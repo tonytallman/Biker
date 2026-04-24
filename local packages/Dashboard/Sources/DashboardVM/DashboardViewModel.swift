@@ -19,7 +19,9 @@ public final class DashboardViewModel {
     package var secondaryMetric1: MetricViewModel = MetricViewModel(title: "TIME", value: "--", units: "")
     package var secondaryMetric2: MetricViewModel = MetricViewModel(title: "DISTANCE", value: "--", units: "")
     package var secondaryMetric3: MetricViewModel = MetricViewModel(title: "CADENCE", value: "--", units: "--")
-    
+    /// Formatted BPM when heart rate is available; `nil` hides the dashboard HR widget.
+    package private(set) var heartRateBPM: String?
+
     private var cancellables: Set<AnyCancellable> = []
     
     /// Initialize with publishers for speed, cadence, time, and distance
@@ -28,11 +30,13 @@ public final class DashboardViewModel {
     ///   - cadence: Publisher of cadence measurements
     ///   - time: Publisher of time measurements
     ///   - distance: Publisher of distance measurements
+    ///   - heartRate: Publisher of BPM in `UnitFrequency` (composition root uses beats-per-minute); `nil` when unavailable.
     public init(
         speed: AnyPublisher<Measurement<UnitSpeed>, Never>,
         cadence: AnyPublisher<Measurement<UnitFrequency>, Never>,
         time: AnyPublisher<Measurement<UnitDuration>, Never>,
-        distance: AnyPublisher<Measurement<UnitLength>, Never>
+        distance: AnyPublisher<Measurement<UnitLength>, Never>,
+        heartRate: AnyPublisher<Measurement<UnitFrequency>?, Never>
     ) {
         // Subscribe to speed publisher
         speed
@@ -79,6 +83,17 @@ public final class DashboardViewModel {
                     value: self.formatDistance(distanceMeasurement),
                     units: distanceMeasurement.unit.symbol
                 )
+            }
+            .store(in: &cancellables)
+
+        heartRate
+            .sink { [weak self] measurement in
+                guard let self else { return }
+                if let m = measurement {
+                    self.heartRateBPM = String(format: "%.0f", m.value)
+                } else {
+                    self.heartRateBPM = nil
+                }
             }
             .store(in: &cancellables)
     }

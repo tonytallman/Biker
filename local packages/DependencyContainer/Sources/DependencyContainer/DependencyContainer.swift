@@ -11,6 +11,7 @@ import Foundation
 import CoreLogic
 import DashboardVM
 import FitnessMachineService
+import HeartRateService
 import MainVM
 import MetricsFromCoreLocation
 import SettingsVM
@@ -27,6 +28,8 @@ final public class DependencyContainer {
     private let cadencePublisher: AnyPublisher<Measurement<UnitFrequency>, Never>
     private let distancePublisher: AnyPublisher<Measurement<UnitLength>, Never>
     private let timePublisher: AnyPublisher<Measurement<UnitDuration>, Never>
+    /// `nil` when no heart-rate source is available (MET-GEN-2).
+    private let heartRatePublisher: AnyPublisher<Measurement<UnitFrequency>?, Never>
     
     // Retain SpeedAndDistanceService to keep location manager running (needed as CLLocationManagerDelegate)
     private let speedAndDistanceService: SpeedAndDistanceService
@@ -41,6 +44,7 @@ final public class DependencyContainer {
     private let speedSelector: PrioritizedMetricSelector<UnitSpeed>?
     private let cadenceSelector: PrioritizedMetricSelector<UnitFrequency>?
     private let distanceSelector: PrioritizedMetricSelector<UnitLength>?
+    private let hrSelector: PrioritizedMetricSelector<UnitFrequency>?
 
     /// Shared metric scope for the current ride (auto-pause, future persistence).
     private let currentRide: MetricContext
@@ -84,9 +88,18 @@ final public class DependencyContainer {
         speedSelector = nil
         cadenceSelector = nil
         distanceSelector = nil
+        hrSelector = nil
+        heartRatePublisher = fake.cadence
+            .map { cad -> Measurement<UnitFrequency>? in
+                let rpm = cad.converted(to: .revolutionsPerMinute).value
+                let bpm = min(200, max(50, 50 + rpm * 0.2))
+                return Measurement(value: bpm, unit: UnitFrequency.beatsPerMinute)
+            }
+            .eraseToAnyPublisher()
         #else
         let bleManager = settingsDependencies.bluetoothSensorManager
         let ftmsManager = settingsDependencies.fitnessMachineSensorManager
+        let hrManager = settingsDependencies.heartRateSensorManager
 
         let bleSpeed = BLEMetricAdaptors.speed(manager: bleManager)
         let ftmsSpeed = FTMSMetricAdaptors.speed(manager: ftmsManager)
@@ -126,6 +139,25 @@ final public class DependencyContainer {
         )
         distancePublisher = distanceMetric.publisher
             .inUnits(settings.distanceUnits)
+
+        let hrSel = PrioritizedMetricSelector(sources: [HRMetricAdaptors.heartRate(manager: hrManager)])
+        hrSelector = hrSel
+        heartRatePublisher = Publishers.CombineLatest(
+            hrSel.isAvailable.removeDuplicates(),
+            hrSel.publisher
+        )
+        .map { available, measurement -> Measurement<UnitFrequency>? in
+            guard available else { return nil }
+            return measurement.converted(to: .beatsPerMinute)
+        }
+        .removeDuplicates { lhs, rhs in
+            switch (lhs, rhs) {
+            case (nil, nil): return true
+            case let (l?, r?): return l.value == r.value && l.unit == r.unit
+            default: return false
+            }
+        }
+        .eraseToAnyPublisher()
         #endif
 
         timeMetric = AccumulatingMetric<UnitDuration>(
@@ -136,7 +168,13 @@ final public class DependencyContainer {
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {
-        DashboardViewModel(speed: speedPublisher, cadence: cadencePublisher, time: timePublisher, distance: distancePublisher)
+        DashboardViewModel(
+            speed: speedPublisher,
+            cadence: cadencePublisher,
+            time: timePublisher,
+            distance: distancePublisher,
+            heartRate: heartRatePublisher
+        )
     }
     
     public func getMainViewModel() -> MainViewModel {

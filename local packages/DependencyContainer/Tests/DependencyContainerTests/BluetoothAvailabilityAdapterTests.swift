@@ -7,6 +7,7 @@ import Combine
 import CyclingSpeedAndCadenceService
 import FitnessMachineService
 import Foundation
+import HeartRateService
 import SettingsVM
 import Testing
 
@@ -34,6 +35,22 @@ struct BluetoothAvailabilityAdapterTests {
         for ftms in FTMSBluetoothAvailability.allCases {
             let mapped = BluetoothAvailabilityAdapter.map(ftms)
             switch ftms {
+            case .notDetermined: #expect(mapped == .notDetermined)
+            case .denied: #expect(mapped == .denied)
+            case .restricted: #expect(mapped == .restricted)
+            case .unsupported: #expect(mapped == .unsupported)
+            case .resetting: #expect(mapped == .resetting)
+            case .poweredOff: #expect(mapped == .poweredOff)
+            case .poweredOn: #expect(mapped == .poweredOn)
+            }
+        }
+    }
+
+    @Test
+    func mapsHROneToOne() {
+        for hr in HRBluetoothAvailability.allCases {
+            let mapped = BluetoothAvailabilityAdapter.map(hr)
+            switch hr {
             case .notDetermined: #expect(mapped == .notDetermined)
             case .denied: #expect(mapped == .denied)
             case .restricted: #expect(mapped == .restricted)
@@ -77,6 +94,27 @@ struct BluetoothAvailabilityAdapterTests {
         ftms.send(.poweredOn)
         #expect(last == .poweredOn)
         csc.send(.poweredOff)
+        #expect(last == .poweredOff)
+        _ = sub
+    }
+
+    @MainActor
+    @Test
+    func combined_threePublishers_yieldsMostRestrictive() {
+        let csc = CurrentValueSubject<CSCBluetoothAvailability, Never>(.poweredOn)
+        let ftms = CurrentValueSubject<FTMSBluetoothAvailability, Never>(.poweredOn)
+        let hr = CurrentValueSubject<HRBluetoothAvailability, Never>(.denied)
+        var last: BluetoothAvailability?
+        let sub = BluetoothAvailabilityAdapter.combined(
+            csc: csc.eraseToAnyPublisher(),
+            ftms: ftms.eraseToAnyPublisher(),
+            hr: hr.eraseToAnyPublisher()
+        )
+        .sink { last = $0 }
+        #expect(last == .denied)
+        hr.send(.poweredOn)
+        #expect(last == .poweredOn)
+        ftms.send(.poweredOff)
         #expect(last == .poweredOff)
         _ = sub
     }

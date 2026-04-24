@@ -210,6 +210,22 @@ struct CompositeSensorProviderTests {
     }
 
     @Test
+    func scanAndStopScanFanOut_threeProviders() {
+        let p1 = FakeSensorProvider()
+        let p2 = FakeSensorProvider()
+        let p3 = FakeSensorProvider()
+        let (c, _) = makeCompositePoweredOn(sensorProviders: [p1, p2, p3])
+        c.scan()
+        c.stopScan()
+        #expect(p1.scanCallCount == 1)
+        #expect(p2.scanCallCount == 1)
+        #expect(p3.scanCallCount == 1)
+        #expect(p1.stopScanCallCount == 1)
+        #expect(p2.stopScanCallCount == 1)
+        #expect(p3.stopScanCallCount == 1)
+    }
+
+    @Test
     func availabilityWrapsSelfWhenSystemPoweredOn() {
         let p1 = FakeSensorProvider()
         let (composite, sys) = makeCompositePoweredOn(sensorProviders: [p1])

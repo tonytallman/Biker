@@ -23,6 +23,7 @@ let package = Package(
         .package(path: "../CyclingSpeedAndCadenceService"),
         .package(path: "../Dashboard"),
         .package(path: "../FitnessMachineService"),
+        .package(path: "../HeartRateService"),
         .package(path: "../MainView"),
         .package(path: "../MetricsFromCoreLocation"),
         .package(path: "../Settings"),
@@ -36,6 +37,7 @@ let package = Package(
                 "CoreLogic",
                 "CyclingSpeedAndCadenceService",
                 "FitnessMachineService",
+                "HeartRateService",
                 "MetricsFromCoreLocation",
                 .product(name: "MainVM", package: "MainView"),
                 .product(name: "SettingsVM", package: "Settings"),
@@ -48,6 +50,7 @@ let package = Package(
                 "DependencyContainer",
                 "CyclingSpeedAndCadenceService",
                 "FitnessMachineService",
+                "HeartRateService",
                 .product(name: "SettingsVM", package: "Settings"),
             ]
         ),

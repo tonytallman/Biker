@@ -2,16 +2,12 @@
 //  DashboardUITests.swift
 //  DashboardUITests
 //
-//  Created by Tony Tallman on 1/20/25.
-//
 
-import XCTest
+import Testing
 
-@testable import DashboardUI
-@testable import DashboardVM
-
-final class DashboardUITests: XCTestCase {
-    func testExample() throws {
-        // Add tests here
+struct DashboardUITests {
+    @Test
+    func placeholder() {
+        #expect(true)
     }
 }

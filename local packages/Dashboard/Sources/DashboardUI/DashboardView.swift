@@ -43,5 +43,14 @@ public struct DashboardView: View {
             .padding([.horizontal, .bottom], 16)
         }
         .background(Color.bikerBackground.ignoresSafeArea())
+        .overlay(alignment: .topTrailing) {
+            if let bpm = viewModel.heartRateBPM {
+                HeartRateWidget(bpm: bpm)
+                    .padding(.top, 12)
+                    .padding(.trailing, 16)
+                    .transition(.opacity.combined(with: .scale))
+            }
+        }
+        .animation(.default, value: viewModel.heartRateBPM)
     }
 }

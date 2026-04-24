@@ -7,6 +7,7 @@
 
 import CyclingSpeedAndCadenceService
 import FitnessMachineService
+import HeartRateService
 import SettingsVM
 
 @MainActor
@@ -15,6 +16,7 @@ final class SettingsDependencies {
     private let compositeSensorProvider: CompositeSensorProvider
     let bluetoothSensorManager: CyclingSpeedAndCadenceSensorManager
     let fitnessMachineSensorManager: FitnessMachineSensorManager
+    let heartRateSensorManager: HeartRateSensorManager
     let metricsSettings: DefaultMetricsSettings
 
     init(appStorage: AppStorage) {
@@ -33,14 +35,20 @@ final class SettingsDependencies {
         fitnessMachineSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.fitnessMachineSensorManager = fitnessMachineSensorManager
 
+        let heartRateSensorManager = HeartRateSensorManager(persistence: namespacedAppStorage)
+        heartRateSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
+        self.heartRateSensorManager = heartRateSensorManager
+
         let cscSensorProvider = CSCSensorProvider(manager: bluetoothSensorManager)
         let ftmsSensorProvider = FTMSSensorProvider(manager: fitnessMachineSensorManager)
+        let hrSensorProvider = HRSensorProvider(manager: heartRateSensorManager)
         let systemAvailability = BluetoothAvailabilityAdapter.combined(
             csc: bluetoothSensorManager.bluetoothAvailability,
-            ftms: fitnessMachineSensorManager.bluetoothAvailability
+            ftms: fitnessMachineSensorManager.bluetoothAvailability,
+            hr: heartRateSensorManager.bluetoothAvailability
         )
         compositeSensorProvider = CompositeSensorProvider(
-            sensorProviders: [cscSensorProvider, ftmsSensorProvider],
+            sensorProviders: [cscSensorProvider, ftmsSensorProvider, hrSensorProvider],
             systemAvailability: systemAvailability,
         )
     }

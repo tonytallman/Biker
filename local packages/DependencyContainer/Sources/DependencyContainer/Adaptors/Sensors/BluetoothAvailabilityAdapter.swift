@@ -9,6 +9,7 @@ import Combine
 import CyclingSpeedAndCadenceService
 import FitnessMachineService
 import Foundation
+import HeartRateService
 import SettingsVM
 
 /// Projects package-local Bluetooth availability into `SettingsVM.BluetoothAvailability`.
@@ -37,6 +38,18 @@ enum BluetoothAvailabilityAdapter {
         }
     }
 
+    static func map(_ value: HRBluetoothAvailability) -> BluetoothAvailability {
+        switch value {
+        case .notDetermined: return .notDetermined
+        case .denied: return .denied
+        case .restricted: return .restricted
+        case .unsupported: return .unsupported
+        case .resetting: return .resetting
+        case .poweredOff: return .poweredOff
+        case .poweredOn: return .poweredOn
+        }
+    }
+
     static func publisher(
         source: AnyPublisher<CSCBluetoothAvailability, Never>
     ) -> AnyPublisher<BluetoothAvailability, Never> {
@@ -45,6 +58,12 @@ enum BluetoothAvailabilityAdapter {
 
     static func publisher(
         source: AnyPublisher<FTMSBluetoothAvailability, Never>
+    ) -> AnyPublisher<BluetoothAvailability, Never> {
+        source.map { map($0) }.eraseToAnyPublisher()
+    }
+
+    static func publisher(
+        source: AnyPublisher<HRBluetoothAvailability, Never>
     ) -> AnyPublisher<BluetoothAvailability, Never> {
         source.map { map($0) }.eraseToAnyPublisher()
     }
@@ -72,6 +91,21 @@ enum BluetoothAvailabilityAdapter {
             csc: publisher(source: csc),
             ftms: publisher(source: ftms)
         )
+    }
+
+    static func combined(
+        csc: AnyPublisher<CSCBluetoothAvailability, Never>,
+        ftms: AnyPublisher<FTMSBluetoothAvailability, Never>,
+        hr: AnyPublisher<HRBluetoothAvailability, Never>
+    ) -> AnyPublisher<BluetoothAvailability, Never> {
+        Publishers.CombineLatest3(
+            publisher(source: csc),
+            publisher(source: ftms),
+            publisher(source: hr)
+        )
+        .map { a, b, c in moreRestrictive(moreRestrictive(a, b), c) }
+        .removeDuplicates()
+        .eraseToAnyPublisher()
     }
 
     private static func restrictionRank(_ v: BluetoothAvailability) -> Int {

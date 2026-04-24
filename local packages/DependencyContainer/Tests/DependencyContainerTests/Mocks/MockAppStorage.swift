@@ -8,6 +8,7 @@
 import DependencyContainer
 import FitnessMachineService
 import Foundation
+import HeartRateService
 
 final class MockAppStorage: AppStorage {
     private var storage: [String: Any] = [:]
@@ -32,3 +33,4 @@ final class MockAppStorage: AppStorage {
 }
 
 extension MockAppStorage: FTMSPersistence {}
+extension MockAppStorage: HRPersistence {}
