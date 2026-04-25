@@ -399,4 +399,9 @@ extension FitnessMachineSensorManager {
         rebindStoreSubscriptions()
         rebuildAndPublish()
     }
+
+    /// Publishes a discovered row snapshot (e.g. DependencyContainer integration tests, no GATT).
+    internal func _test_publishDiscovered(_ sensors: [DiscoveredSensor]) {
+        discoveredSubject.send(sensors)
+    }
 }

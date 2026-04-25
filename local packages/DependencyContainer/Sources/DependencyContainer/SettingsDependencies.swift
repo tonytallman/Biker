@@ -19,6 +19,34 @@ final class SettingsDependencies {
     let heartRateSensorManager: HeartRateSensorManager
     let metricsSettings: DefaultMetricsSettings
 
+    /// Wire real per-family managers and the composite (integration tests, injected fakes).
+    init(
+        appStorage: AppStorage,
+        csc: CyclingSpeedAndCadenceSensorManager,
+        ftms: FitnessMachineSensorManager,
+        hr: HeartRateSensorManager
+    ) {
+        let namespacedAppStorage = appStorage.withNamespacedKeys("Settings")
+        let settingsStorage = namespacedAppStorage.asSettingsStorage()
+        systemSettings = DefaultSystemSettings(storage: settingsStorage)
+        metricsSettings = DefaultMetricsSettings(storage: settingsStorage)
+        bluetoothSensorManager = csc
+        fitnessMachineSensorManager = ftms
+        heartRateSensorManager = hr
+        let cscSensorProvider = CSCSensorProvider(manager: csc)
+        let ftmsSensorProvider = FTMSSensorProvider(manager: ftms)
+        let hrSensorProvider = HRSensorProvider(manager: hr)
+        let systemAvailability = BluetoothAvailabilityAdapter.combined(
+            csc: csc.bluetoothAvailability,
+            ftms: ftms.bluetoothAvailability,
+            hr: hr.bluetoothAvailability
+        )
+        compositeSensorProvider = CompositeSensorProvider(
+            sensorProviders: [cscSensorProvider, ftmsSensorProvider, hrSensorProvider],
+            systemAvailability: systemAvailability,
+        )
+    }
+
     init(appStorage: AppStorage) {
         let namespacedAppStorage = appStorage.withNamespacedKeys("Settings")
         let settingsStorage = namespacedAppStorage.asSettingsStorage()
@@ -52,6 +80,9 @@ final class SettingsDependencies {
             systemAvailability: systemAvailability,
         )
     }
+
+    /// Full composite (integration tests, `@testable import`).
+    var integrationComposite: CompositeSensorProvider { compositeSensorProvider }
 
     func getSettingsViewModel() -> SettingsViewModel {
         SettingsVM.SettingsViewModel(

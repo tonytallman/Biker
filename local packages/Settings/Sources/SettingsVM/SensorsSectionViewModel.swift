@@ -19,6 +19,8 @@ package final class SensorsSectionViewModel {
     private var priorEmissionWasAvailable = false
 
     package private(set) var knownSensors: [SensorViewModel] = []
+    /// Ids in the current known-sensor list; used to pop Sensor Details when a row is removed upstream (SEN-DET-4).
+    package private(set) var knownSensorIDs: Set<UUID> = []
     /// Current gating of sensor lists and the ``SensorProvider`` (ADR-0009).
     package private(set) var currentSensorAvailability: SensorAvailability = .notDetermined
     /// Set when `SensorAvailability` transitions from ``SensorAvailability/available(_:)`` to a non-ready case while the scan sheet may be open (SEN-SCAN-3).
@@ -55,6 +57,7 @@ package final class SensorsSectionViewModel {
         providerCancellables.removeAll(keepingCapacity: true)
         knownSensorViewModels.removeAll(keepingCapacity: true)
         knownSensors = []
+        knownSensorIDs = []
         lastWiredProvider = nil
 
         if case .available(let p) = value {
@@ -86,6 +89,7 @@ package final class SensorsSectionViewModel {
             knownSensorViewModels.removeValue(forKey: id)
         }
         knownSensors = ordered
+        knownSensorIDs = Set(ordered.map(\.sensorID))
     }
 
     package func scanForSensors() {

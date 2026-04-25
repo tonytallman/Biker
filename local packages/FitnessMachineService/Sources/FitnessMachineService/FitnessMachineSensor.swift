@@ -170,11 +170,12 @@ extension FitnessMachineSensor {
     }
 
     /// Includes `nil` when disconnected or not yet received (unlike ``speed`` / ``cadence``, which use `compactMap`).
-    internal var speedOptional: AnyPublisher<Measurement<UnitSpeed>?, Never> {
+    /// Public for composition-root metric wiring in `DependencyContainer` (per-UUID lex tie-break).
+    public var speedOptional: AnyPublisher<Measurement<UnitSpeed>?, Never> {
         speedSubject.eraseToAnyPublisher()
     }
 
-    internal var cadenceOptional: AnyPublisher<Measurement<UnitFrequency>?, Never> {
+    public var cadenceOptional: AnyPublisher<Measurement<UnitFrequency>?, Never> {
         cadenceSubject.eraseToAnyPublisher()
     }
 

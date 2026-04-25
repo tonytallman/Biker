@@ -23,3 +23,5 @@ A Swift package for Bluetooth Low Energy (BLE) [Heart Rate Service](https://www.
 - Sensor behavior uses `internal` `_test_ingestHeartRateMeasurement` and fakes conforming to `HRPeripheral`.
 - The manager is covered with `internal` test hooks and `FakeHRCentral`.
 - `HRKnownSensorStore` has dedicated unit tests.
+
+**Cross-package (Biker app):** HR metric wiring through `HRMetricAdaptors` + `PrioritizedMetricSelector` is covered in **`DependencyContainerIntegrationTests`** (`MetricSelectionIntegrationTests`), using a fake `HRCentral` for deterministic runs.

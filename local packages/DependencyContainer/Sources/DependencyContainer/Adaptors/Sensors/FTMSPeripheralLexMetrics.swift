@@ -31,6 +31,8 @@ final class FTMSPeripheralLexMetrics {
         self.speed = AnyMetric(publisher: speedOut, isAvailable: speedAvail)
         self.cadence = AnyMetric(publisher: cadenceOut, isAvailable: cadenceAvail)
 
+        // `rebindSensors` is `@MainActor`. Combine may deliver `sensors` off the main queue; without
+        // `receive(on:)` the hop is async and test/app code can `ingest` before per-sensor hooks exist.
         manager.sensors
             .receive(on: DispatchQueue.main)
             .sink { [weak self] list in
@@ -52,7 +54,6 @@ final class FTMSPeripheralLexMetrics {
                 s.connectionState.map { $0 == .connected }.removeDuplicates(),
                 s.speedOptional
             )
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] c, v in
                 self?.speedSnap[id] = (c, v)
                 self?.emitSpeed()
@@ -63,7 +64,6 @@ final class FTMSPeripheralLexMetrics {
                 s.connectionState.map { $0 == .connected }.removeDuplicates(),
                 s.cadenceOptional
             )
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] c, v in
                 self?.cadenceSnap[id] = (c, v)
                 self?.emitCadence()

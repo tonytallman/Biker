@@ -180,6 +180,30 @@ struct SensorsSectionViewModelTests {
 
     // MARK: - makeSensorDetailsViewModel (factory from known list)
 
+    @Test("knownSensorIDs updates when a sensor is removed from the provider; details VM becomes nil (SEN-DET-4)")
+    func testKnownSensorIDsAndDetailsDismisssWhenRowRemoved() {
+        let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
+        let id1 = UUID()
+        let id2 = UUID()
+        let a: any Sensor = MockPlainSensor(
+            id: id1,
+            name: "A",
+            type: .cyclingSpeedAndCadence
+        )
+        let b: any Sensor = MockPlainSensor(
+            id: id2,
+            name: "B",
+            type: .heartRate
+        )
+        mock.provider.setKnownSensors([a, b])
+        let section = makeSectionVM(mockAvailability: mock)
+        #expect(section.knownSensorIDs == Set([id1, id2]))
+        #expect(section.makeSensorDetailsViewModel(for: id2, dismiss: {}) != nil)
+        mock.provider.setKnownSensors([a])
+        #expect(section.knownSensorIDs == Set([id1]))
+        #expect(section.makeSensorDetailsViewModel(for: id2, dismiss: {}) == nil)
+    }
+
     @Test("makeSensorDetailsViewModel returns a VM for a known id and nil for unknown")
     func testMakeSensorDetailsViewModel() {
         let mock = MockSensorAvailability(initialBluetooth: .poweredOn)

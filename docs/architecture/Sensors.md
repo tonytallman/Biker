@@ -204,3 +204,26 @@ Each `SEN-*` / `MET-*` id from [Sensors.md](../srs/Sensors.md) maps to the overv
 | MET-HR-3 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
 
 > **Composition:** [ADR-0008](../adr/0008-no-singletons-for-sensor-managers.md) applies to how managers and the composite are constructed; it is left implicit in many rows.
+
+## Automated integration coverage (Biker scheme)
+
+The **`DependencyContainerIntegrationTests`** target (in `Biker`’s Test action) exercises the composition root and Lex adapters with in-memory persistences and **fake `CSCCentral` / `FTMSCentral` / `HRCentral`** (see `local packages/DependencyContainer/Tests/DependencyContainerIntegrationTests/`). Integration tests **avoid a real** `CBCentralManager` where a fake is injected: Core Bluetooth can otherwise reorder or defer delivery relative to `CSCPeripheralLexMetrics` / `FTMSPeripheralLexMetrics` rebind/ingest.
+
+| Area | Test suite or method |
+|------|----------------------|
+| Composite, SEN-SCAN-7/8, scan fan-out | `SensorStackCompositionIntegrationTests` |
+| Availability merge (most restrictive) | `combinedAvailability_deniedBeatsPoweredOn` |
+| Reconnect / disabled skip | `ftms_reconnectsDisconnectedKnownOnPowerOn`, `ftms_reconnectSkipsWhenKnownDisabled` |
+| Persistence + legacy CSC migration | `settingsPersistence_roundTripCSCWheel_durableAcrossRecomposition`, `legacyKnownSensors_migratesToCscStoreInLiveComposition` |
+| ADR-0006, MET-GEN-2/3, SEN-TYP-5, HR | `MetricSelectionIntegrationTests` |
+
+Settings-only UI (e.g. SEN-DET-4) remains in **`SettingsVMTests`**.
+
+### Illustrative SRS ↔ test pointers
+
+| SRS | Where exercised |
+|-----|-----------------|
+| MET-GEN-2, MET-SPD-*, MET-CAD-* | `MetricSelection (integration)` suite |
+| MET-GEN-3 | `metGen3_tickRepeatsCurrentSpeedAtLeastOncePerTickWhileActive` |
+| SEN-TYP-5 | `prefersDualCapableForSpeedAndCadenceOverLexFirstWheelOnly` |
+| SEN-DET-4 | `SensorsSectionViewModelTests` |

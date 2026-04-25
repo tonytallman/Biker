@@ -23,3 +23,5 @@ A Swift package for Bluetooth Low Energy (BLE) [Fitness Machine Service (FTMS)](
 - Sensor behavior uses `internal` `_test_ingestIndoorBikeData` and fakes conforming to `FTMSPeripheral`.
 - The manager is covered with `internal` test hooks and `FakeFTMSCentral`.
 - `FTMSKnownSensorStore` has dedicated unit tests.
+
+**Cross-package (Biker app):** `FitnessMachineSensorManager` + `FTMSPeripheralLexMetrics` + metric selection is exercised in **`DependencyContainerIntegrationTests`** (see `MetricSelectionIntegrationTests`), preferring a fake `FTMSCentral` so Core Bluetooth does not reorder rebind/ingest relative to the Lex layer.

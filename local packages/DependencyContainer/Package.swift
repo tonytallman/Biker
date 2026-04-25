@@ -19,6 +19,7 @@ let package = Package(
         ),
     ],
     dependencies: [
+        .package(url: "https://github.com/pointfreeco/combine-schedulers", from: "1.0.0"),
         .package(path: "../CoreLogic"),
         .package(path: "../CyclingSpeedAndCadenceService"),
         .package(path: "../Dashboard"),
@@ -53,6 +54,18 @@ let package = Package(
                 "FitnessMachineService",
                 "HeartRateService",
                 .product(name: "SettingsVM", package: "Settings"),
+            ]
+        ),
+        .testTarget(
+            name: "DependencyContainerIntegrationTests",
+            dependencies: [
+                "DependencyContainer",
+                "CoreLogic",
+                "CyclingSpeedAndCadenceService",
+                "FitnessMachineService",
+                "HeartRateService",
+                .product(name: "SettingsVM", package: "Settings"),
+                .product(name: "CombineSchedulers", package: "combine-schedulers"),
             ]
         ),
     ]

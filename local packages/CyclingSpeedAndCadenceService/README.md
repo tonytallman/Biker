@@ -25,6 +25,8 @@ A Swift package for Bluetooth Low Energy (BLE) [Cycling Speed and Cadence Servic
 - The manager is covered with `internal` test hooks to register sensors and assert merged `derivedUpdates`, known-sensor ordering, and persistence via an in-memory `CSCKnownSensorPersistence` test double.
 - `CSCKnownSensorStore` has dedicated unit tests (round-trip, filtering, coalescing).
 
+**Cross-package (Biker app):** end-to-end composition of `CyclingSpeedAndCadenceSensorManager` with `CSCPeripheralLexMetrics` and `PrioritizedMetricSelector` is covered in **`DependencyContainerIntegrationTests`** (`local packages/DependencyContainer`, `MetricSelectionIntegrationTests` + stack tests), using a fake `CSCCentral` so tests do not depend on a live `CBCentralManager` ordering.
+
 ## Legacy name
 
 `BluetoothSensorManager` was split into the types above; call sites have been updated to `CyclingSpeedAndCadenceSensorManager`.

@@ -37,11 +37,7 @@ struct SensorsSectionView: View {
             }
         }
         .navigationDestination(for: UUID.self) { id in
-            if let detailsVM = viewModel.makeSensorDetailsViewModel(for: id, dismiss: {}) {
-                SensorDetailsView(viewModel: detailsVM)
-            } else {
-                Color.bikerBackground
-            }
+            SensorDetailsNavigationHost(sensorID: id, sensorsSection: viewModel)
         }
     }
 
@@ -172,4 +168,31 @@ private struct SensorsSectionPreviewHost: View {
 
 #Preview("Sensors | available (BLE on)") {
     SensorsSectionPreviewHost(availability: .available)
+}
+
+// MARK: - Sensor Details: dismiss when known row removed upstream (SEN-DET-4)
+
+private struct SensorDetailsNavigationHost: View {
+    let sensorID: UUID
+    @Bindable var sensorsSection: SensorsSectionViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        Group {
+            if let detailsVM = sensorsSection.makeSensorDetailsViewModel(
+                for: sensorID,
+                dismiss: { dismiss() }
+            ) {
+                SensorDetailsView(viewModel: detailsVM)
+                    .onChange(of: sensorsSection.knownSensorIDs) { _, ids in
+                        if !ids.contains(sensorID) {
+                            dismiss()
+                        }
+                    }
+            } else {
+                Color.bikerBackground
+                    .onAppear { dismiss() }
+            }
+        }
+    }
 }

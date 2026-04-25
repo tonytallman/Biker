@@ -72,7 +72,6 @@ final class CSCPeripheralLexMetrics {
                 s.connectionState.map { $0 == .connected }.removeDuplicates(),
                 s.speed
             )
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] c, v in
                 self?.speedSnap[id] = (c, v)
                 self?.emitSpeed()
@@ -83,7 +82,6 @@ final class CSCPeripheralLexMetrics {
                 s.connectionState.map { $0 == .connected }.removeDuplicates(),
                 s.cadence
             )
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] c, v in
                 self?.cadenceSnap[id] = (c, v)
                 self?.emitCadence()
@@ -94,7 +92,6 @@ final class CSCPeripheralLexMetrics {
                 s.connectionState.map { $0 == .connected }.removeDuplicates(),
                 s.distanceDelta
             )
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] c, v in
                 self?.distanceSnap[id] = (c, v)
                 self?.emitDistance()
