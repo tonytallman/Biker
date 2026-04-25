@@ -6,9 +6,8 @@
 //
 
 import Foundation
-import SettingsVM
 
-final package class SettingsStorageFromAppStorage: SettingsStorage {
+final package class AnyAppStorage: AppStorage {
     private let appStorage: AppStorage
 
     package init(_ appStorage: AppStorage) {
@@ -21,11 +20,5 @@ final package class SettingsStorageFromAppStorage: SettingsStorage {
 
     package func set(value: Any?, forKey key: String) {
         appStorage.set(value: value, forKey: key)
-    }
-}
-
-package extension AppStorage {
-    func asSettingsStorage() -> SettingsStorageFromAppStorage {
-        .init(self)
     }
 }

@@ -4,7 +4,11 @@
 //
 
 import FitnessMachineService
-import Foundation
 
-extension UserDefaultsAppStorage: FTMSPersistence {}
-extension AppStorageWithNamespacedKeys: FTMSPersistence {}
+extension AnyAppStorage: FTMSPersistence { }
+
+package extension AppStorage {
+    func asFTMSPersistence() -> FTMSPersistence {
+        AnyAppStorage(self)
+    }
+}

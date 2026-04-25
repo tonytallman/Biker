@@ -28,7 +28,7 @@ final package class AppStorageWithNamespacedKeys: AppStorage {
 }
 
 package extension AppStorage {
-    func withNamespacedKeys(_ keyPrefix: String) -> AppStorageWithNamespacedKeys {
-        .init(storage: self, keyPrefix: keyPrefix)
+    func withNamespacedKeys(_ keyPrefix: String) -> AppStorage {
+        AppStorageWithNamespacedKeys(storage: self, keyPrefix: keyPrefix)
     }
 }

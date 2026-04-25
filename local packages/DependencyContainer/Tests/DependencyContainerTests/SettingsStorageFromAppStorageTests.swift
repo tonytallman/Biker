@@ -10,20 +10,20 @@ import Testing
 
 import DependencyContainer
 
-@Suite("SettingsStorageFromAppStorage Tests")
+@Suite("AnyAppStorage Tests")
 struct SettingsStorageFromAppStorageTests {
     @Test("get delegates to underlying AppStorage")
     func getDelegatesToAppStorage() {
         let mock = MockAppStorage()
         mock.set(value: "delegated", forKey: "key")
-        let adaptor = SettingsStorageFromAppStorage(mock)
+        let adaptor = AnyAppStorage(mock)
         #expect(adaptor.get(forKey: "key") as? String == "delegated")
     }
 
     @Test("set delegates to underlying AppStorage")
     func setDelegatesToAppStorage() {
         let mock = MockAppStorage()
-        let adaptor = SettingsStorageFromAppStorage(mock)
+        let adaptor = AnyAppStorage(mock)
         adaptor.set(value: "value", forKey: "key")
         #expect(mock.get(forKey: "key") as? String == "value")
     }
@@ -32,7 +32,7 @@ struct SettingsStorageFromAppStorageTests {
     func setNilRemovesValue() {
         let mock = MockAppStorage()
         mock.set(value: "initial", forKey: "key")
-        let adaptor = SettingsStorageFromAppStorage(mock)
+        let adaptor = AnyAppStorage(mock)
         adaptor.set(value: nil, forKey: "key")
         #expect(adaptor.get(forKey: "key") == nil)
         #expect(mock.get(forKey: "key") == nil)

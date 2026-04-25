@@ -3,8 +3,12 @@
 //  DependencyContainer
 //
 
-import Foundation
 import HeartRateService
 
-extension UserDefaultsAppStorage: HRPersistence {}
-extension AppStorageWithNamespacedKeys: HRPersistence {}
+extension AnyAppStorage: HRPersistence { }
+
+package extension AppStorage {
+    func asHRPersistence() -> HRPersistence {
+        AnyAppStorage(self)
+    }
+}
