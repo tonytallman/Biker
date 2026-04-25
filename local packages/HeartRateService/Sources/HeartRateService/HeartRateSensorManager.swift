@@ -27,7 +27,7 @@ public final class HeartRateSensorManager: NSObject {
     private var peripheralsByID: [UUID: any HRPeripheral] = [:]
     private var storeValueCancellables = Set<AnyCancellable>()
 
-    public init(persistence: any HRPersistence) {
+    public init(persistence: any Storage) {
         self.hrServiceUUID = CBUUID(string: "180D")
         let core = CBCentralManager(delegate: nil, queue: .main)
         self.central = RealHRCentral(core: core)
@@ -49,7 +49,7 @@ public final class HeartRateSensorManager: NSObject {
         rebuildAndPublish()
     }
 
-    public init(persistence: any HRPersistence, central: any HRCentralManaging) {
+    public init(persistence: any Storage, central: any HRCentralManaging) {
         self.hrServiceUUID = CBUUID(string: "180D")
         self.central = central
         self.store = HRKnownSensorStore(persistence: persistence)

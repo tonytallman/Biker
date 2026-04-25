@@ -33,4 +33,4 @@ final class MockAppStorage: AppStorage {
 }
 
 extension MockAppStorage: FitnessMachineService.Storage {}
-extension MockAppStorage: HRPersistence {}
+extension MockAppStorage: HeartRateService.Storage {}

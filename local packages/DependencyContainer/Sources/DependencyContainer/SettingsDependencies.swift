@@ -64,8 +64,8 @@ final class SettingsDependencies {
         fitnessMachineSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.fitnessMachineSensorManager = fitnessMachineSensorManager
 
-        let hrsPersistence = namespacedAppStorage.asHRPersistence()
-        let heartRateSensorManager = HeartRateSensorManager(persistence: hrsPersistence)
+        let hrsStorage = namespacedAppStorage.asHeartRateServiceStorage()
+        let heartRateSensorManager = HeartRateSensorManager(persistence: hrsStorage)
         heartRateSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.heartRateSensorManager = heartRateSensorManager
 

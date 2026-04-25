@@ -8,7 +8,7 @@ import Foundation
 
 @testable import HeartRateService
 
-final class InMemoryHRPersistence: HRPersistence {
+final class InMemoryHRPersistence: HeartRateService.Storage {
     private var storage: [String: Any] = [:]
 
     init() {}

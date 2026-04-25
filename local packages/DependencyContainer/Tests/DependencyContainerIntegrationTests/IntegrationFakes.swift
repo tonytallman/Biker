@@ -29,7 +29,7 @@ final class InMemoryFTMSIntegrationPersistence: FitnessMachineService.Storage {
     }
 }
 
-final class InMemoryHRIntegrationPersistence: HRPersistence {
+final class InMemoryHRIntegrationPersistence: HeartRateService.Storage {
     private var storage: [String: Any] = [:]
     func get(forKey key: String) -> Any? { storage[key] }
     func set(value: Any?, forKey key: String) {

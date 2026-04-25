@@ -11,7 +11,7 @@ import Testing
 
 private let hrKnownSensorsStorageKey = "HR.knownSensors.v1"
 
-private final class InMemoryHRPersistence: HRPersistence {
+private final class InMemoryHRPersistence: Storage {
     private var storage: [String: Any] = [:]
 
     init(records: [HRKnownSensorRecord] = []) {

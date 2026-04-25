@@ -10,11 +10,11 @@ import Foundation
 final class HRKnownSensorStore {
     private static let storageKey = "HR.knownSensors.v1"
 
-    private let persistence: any HRPersistence
+    private let persistence: any Storage
     private var recordsByID: [UUID: HRKnownSensorRecord] = [:]
     private var lastSavedRecords: [HRKnownSensorRecord] = []
 
-    init(persistence: any HRPersistence) {
+    init(persistence: any Storage) {
         self.persistence = persistence
     }
 
