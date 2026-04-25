@@ -11,7 +11,7 @@ import Testing
 
 private let ftmsKnownSensorsStorageKey = "FTMS.knownSensors.v1"
 
-private final class InMemoryFTMSPersistence: FTMSPersistence {
+private final class InMemoryFTMSPersistence: Storage {
     private var storage: [String: Any] = [:]
 
     init(records: [FTMSKnownSensorRecord] = []) {

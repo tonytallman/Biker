@@ -59,8 +59,8 @@ final class SettingsDependencies {
         bluetoothSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.bluetoothSensorManager = bluetoothSensorManager
 
-        let ftmsPersistence = namespacedAppStorage.asFTMSPersistence()
-        let fitnessMachineSensorManager = FitnessMachineSensorManager(persistence: ftmsPersistence)
+        let ftmsStorage = namespacedAppStorage.asFitnessMachineServiceStorage()
+        let fitnessMachineSensorManager = FitnessMachineSensorManager(persistence: ftmsStorage)
         fitnessMachineSensorManager.reconnectDisconnectedKnownSensorsIfPoweredOn()
         self.fitnessMachineSensorManager = fitnessMachineSensorManager
 

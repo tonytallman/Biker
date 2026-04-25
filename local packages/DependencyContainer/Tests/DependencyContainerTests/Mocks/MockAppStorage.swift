@@ -32,5 +32,5 @@ final class MockAppStorage: AppStorage {
     }
 }
 
-extension MockAppStorage: FTMSPersistence {}
+extension MockAppStorage: FitnessMachineService.Storage {}
 extension MockAppStorage: HRPersistence {}

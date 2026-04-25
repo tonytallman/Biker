@@ -10,11 +10,11 @@ import Foundation
 final class FTMSKnownSensorStore {
     private static let storageKey = "FTMS.knownSensors.v1"
 
-    private let persistence: any FTMSPersistence
+    private let persistence: any Storage
     private var recordsByID: [UUID: FTMSKnownSensorRecord] = [:]
     private var lastSavedRecords: [FTMSKnownSensorRecord] = []
 
-    init(persistence: any FTMSPersistence) {
+    init(persistence: any Storage) {
         self.persistence = persistence
     }
 

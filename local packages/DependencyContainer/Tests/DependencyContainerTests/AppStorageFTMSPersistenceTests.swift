@@ -11,7 +11,7 @@ import Testing
 
 @MainActor
 struct AppStorageFTMSPersistenceTests {
-    /// `AppStorage` conforms to `FTMSPersistence`; `FTMSKnownSensorStore` round-trips JSON via `MockAppStorage`.
+    /// `AppStorage` conforms to `Storage`; `FTMSKnownSensorStore` round-trips JSON via `MockAppStorage`.
     @Test func appStorage_roundTripsKnownSensorsThroughStore() {
         let storage = MockAppStorage()
         let store = FTMSKnownSensorStore(persistence: storage)

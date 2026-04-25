@@ -29,7 +29,7 @@ public final class FitnessMachineSensorManager: NSObject {
     private var peripheralsByID: [UUID: any FTMSPeripheral] = [:]
     private var storeValueCancellables = Set<AnyCancellable>()
 
-    public init(persistence: any FTMSPersistence) {
+    public init(persistence: any Storage) {
         self.ftmsServiceUUID = CBUUID(string: "1826")
         let core = CBCentralManager(delegate: nil, queue: .main)
         self.central = RealFTMSCentral(core: core)
@@ -51,7 +51,7 @@ public final class FitnessMachineSensorManager: NSObject {
         rebuildAndPublish()
     }
 
-    public init(persistence: any FTMSPersistence, central: any FTMSCentralManaging) {
+    public init(persistence: any Storage, central: any FTMSCentralManaging) {
         self.ftmsServiceUUID = CBUUID(string: "1826")
         self.central = central
         self.store = FTMSKnownSensorStore(persistence: persistence)

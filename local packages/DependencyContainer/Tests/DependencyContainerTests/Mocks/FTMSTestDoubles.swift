@@ -8,7 +8,7 @@ import Foundation
 
 @testable import FitnessMachineService
 
-final class InMemoryFTMSPersistence: FTMSPersistence {
+final class InMemoryFTMSPersistence: FitnessMachineService.Storage {
     private var storage: [String: Any] = [:]
 
     init() {}

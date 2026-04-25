@@ -21,7 +21,7 @@ final class InMemoryCSCIntegrationPersistence: CSCKnownSensorPersistence {
     func saveRecords(_ records: [CSCKnownSensorRecord]) { self.records = records }
 }
 
-final class InMemoryFTMSIntegrationPersistence: FTMSPersistence {
+final class InMemoryFTMSIntegrationPersistence: FitnessMachineService.Storage {
     private var storage: [String: Any] = [:]
     func get(forKey key: String) -> Any? { storage[key] }
     func set(value: Any?, forKey key: String) {
