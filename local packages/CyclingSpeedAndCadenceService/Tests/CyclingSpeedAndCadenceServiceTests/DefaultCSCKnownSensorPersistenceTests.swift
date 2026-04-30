@@ -1,18 +1,34 @@
 //
-//  CSCKnownSensorPersistenceAdapterTests.swift
-//  DependencyContainerTests
+//  DefaultCSCKnownSensorPersistenceTests.swift
+//  CyclingSpeedAndCadenceServiceTests
 //
 
-import CyclingSpeedAndCadenceService
 import Foundation
 import Testing
-@testable import DependencyContainer
+
+@testable import CyclingSpeedAndCadenceService
+
+private final class MockStorage: Storage {
+    private var storage: [String: Any] = [:]
+
+    func get(forKey key: String) -> Any? {
+        storage[key]
+    }
+
+    func set(value: Any?, forKey key: String) {
+        if let value {
+            storage[key] = value
+        } else {
+            storage.removeValue(forKey: key)
+        }
+    }
+}
 
 @MainActor
-struct CSCKnownSensorPersistenceAdapterTests {
+struct DefaultCSCKnownSensorPersistenceTests {
     @Test func roundTrip_encodesDataUnderKey() {
-        let storage = MockAppStorage()
-        let adapter = CSCKnownSensorPersistenceAdapter(appStorage: storage)
+        let storage = MockStorage()
+        let persistence = DefaultCSCKnownSensorPersistence(storage: storage)
         let id = UUID()
         let row = [
             CSCKnownSensorRecord(
@@ -22,8 +38,8 @@ struct CSCKnownSensorPersistenceAdapterTests {
                 wheelDiameterMeters: 0.6
             ),
         ]
-        adapter.saveRecords(row)
-        let reloaded = adapter.loadRecords()
+        persistence.saveRecords(row)
+        let reloaded = persistence.loadRecords()
         #expect(reloaded.count == 1)
         #expect(reloaded[0].id == id)
         #expect(reloaded[0].name == "K")
@@ -33,23 +49,23 @@ struct CSCKnownSensorPersistenceAdapterTests {
     }
 
     @Test func corruptedPayload_returnsEmpty() {
-        let storage = MockAppStorage()
+        let storage = MockStorage()
         storage.set(value: "not-json-data", forKey: "CSC.knownSensors.v1")
-        let adapter = CSCKnownSensorPersistenceAdapter(appStorage: storage)
-        #expect(adapter.loadRecords().isEmpty)
+        let persistence = DefaultCSCKnownSensorPersistence(storage: storage)
+        #expect(persistence.loadRecords().isEmpty)
     }
 
     @Test func legacyKnownSensors_migratesToV1AndRemovesLegacyKey() {
         let id = UUID()
-        let storage = MockAppStorage()
+        let storage = MockStorage()
         let legacy: [[String: String]] = [
             ["id": id.uuidString, "name": "Old Wheel"],
         ]
         let legacyData = try! JSONSerialization.data(withJSONObject: legacy, options: [])
         storage.set(value: legacyData, forKey: "knownSensors")
 
-        let adapter = CSCKnownSensorPersistenceAdapter(appStorage: storage)
-        let reloaded = adapter.loadRecords()
+        let persistence = DefaultCSCKnownSensorPersistence(storage: storage)
+        let reloaded = persistence.loadRecords()
         #expect(reloaded.count == 1)
         #expect(reloaded[0].id == id)
         #expect(reloaded[0].name == "Old Wheel")

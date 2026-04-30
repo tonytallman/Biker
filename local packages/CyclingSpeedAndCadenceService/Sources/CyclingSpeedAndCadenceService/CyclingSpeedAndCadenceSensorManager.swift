@@ -28,31 +28,23 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
     private let dualCapableSubject = CurrentValueSubject<UUID?, Never>(nil)
     private var dualCapableCancellables = Set<AnyCancellable>()
 
-    /// Convenience: production central on the main queue.
-    public init(persistence: any CSCKnownSensorPersistence) {
-        self.cscServiceUUID = CBUUID(string: "1816")
+    /// Production: persist known sensors via default JSON-backed `Storage` implementation in this module.
+    public convenience init(storage: Storage) {
+        let persistence = DefaultCSCKnownSensorPersistence(storage: storage)
         let core = CBCentralManager(delegate: nil, queue: .main)
-        self.central = RealCSCCentral(core: core)
-        self.store = CSCKnownSensorStore(persistence: persistence)
-        self.availabilitySubject = CurrentValueSubject(
-            CSCBluetoothAvailabilityReducer.reduce(authorization: type(of: core).authorization, state: core.state)
-        )
-        super.init()
-        if let c = (self.central as? RealCSCCentral)?.core {
-            c.delegate = self
-        } else {
-            assertionFailure("Expected RealCSCCentral in production init")
-        }
-        for record in self.store.loadAll() {
-            installSensorFromLoadedRecord(record)
-        }
-        rebindDerivedMerge()
-        rebindStoreSubscriptions()
-        rebuildAndPublish()
+        let central = RealCSCCentral(core: core)
+        self.init(persistence: persistence, central: central)
     }
 
-    /// Designated: inject a `CSCCentralManaging` (e.g. `FakeCSCCentral` in tests).
-    public init(persistence: any CSCKnownSensorPersistence, central: any CSCCentralManaging) {
+    /// Tests / previews: mock persistence with a real main-queue `CBCentralManager`.
+    internal convenience init(persistence: any CSCKnownSensorPersistence) {
+        let core = CBCentralManager(delegate: nil, queue: .main)
+        let central = RealCSCCentral(core: core)
+        self.init(persistence: persistence, central: central)
+    }
+
+    /// Designated internal: inject `CSCKnownSensorPersistence` and `CSCCentralManaging` (e.g. `FakeCSCCentral` in tests).
+    internal init(persistence: any CSCKnownSensorPersistence, central: any CSCCentralManaging) {
         self.cscServiceUUID = CBUUID(string: "1816")
         self.central = central
         self.store = CSCKnownSensorStore(persistence: persistence)

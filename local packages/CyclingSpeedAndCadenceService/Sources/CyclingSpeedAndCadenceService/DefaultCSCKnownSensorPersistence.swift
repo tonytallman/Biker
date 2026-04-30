@@ -1,16 +1,16 @@
 //
-//  CSCKnownSensorPersistenceAdapter.swift
-//  DependencyContainer
+//  DefaultCSCKnownSensorPersistence.swift
+//  CyclingSpeedAndCadenceService
 //
-//  `AppStorage` / `UserDefaults` backing for CSC known-sensor JSON under a versioned key.
+//  Runtime default: JSON rows in keyed `Storage` (`CSC.knownSensors.v1`),
+//  with one-shot migration from legacy `knownSensors`.
 //
 
-import CyclingSpeedAndCadenceService
 import Foundation
 
 @MainActor
-final class CSCKnownSensorPersistenceAdapter: CSCKnownSensorPersistence {
-    private let appStorage: AppStorage
+final class DefaultCSCKnownSensorPersistence: CSCKnownSensorPersistence {
+    private let storage: Storage
     private static let key = "CSC.knownSensors.v1"
     /// Pre–per-store-schema blob: `[{ "id", "name" }]` under the same namespaced `Storage` as v1
     /// (full key e.g. `Settings.knownSensors` when using `withNamespacedKeys("Settings")`).
@@ -21,12 +21,12 @@ final class CSCKnownSensorPersistenceAdapter: CSCKnownSensorPersistence {
         let name: String
     }
 
-    init(appStorage: AppStorage) {
-        self.appStorage = appStorage
+    init(storage: Storage) {
+        self.storage = storage
     }
 
     func loadRecords() -> [CSCKnownSensorRecord] {
-        if let data = appStorage.get(forKey: Self.key) as? Data,
+        if let data = storage.get(forKey: Self.key) as? Data,
            !data.isEmpty,
            let records = try? JSONDecoder().decode([CSCKnownSensorRecord].self, from: data),
            !records.isEmpty
@@ -38,7 +38,7 @@ final class CSCKnownSensorPersistenceAdapter: CSCKnownSensorPersistence {
             return migrated
         }
 
-        if let data = appStorage.get(forKey: Self.key) as? Data,
+        if let data = storage.get(forKey: Self.key) as? Data,
            !data.isEmpty,
            let records = try? JSONDecoder().decode([CSCKnownSensorRecord].self, from: data)
         {
@@ -49,20 +49,20 @@ final class CSCKnownSensorPersistenceAdapter: CSCKnownSensorPersistence {
 
     func saveRecords(_ records: [CSCKnownSensorRecord]) {
         if records.isEmpty {
-            appStorage.set(value: nil, forKey: Self.key)
+            storage.set(value: nil, forKey: Self.key)
             return
         }
         if let data = try? JSONEncoder().encode(records) {
-            appStorage.set(value: data, forKey: Self.key)
+            storage.set(value: data, forKey: Self.key)
         }
     }
 
     /// One-shot migration: legacy `knownSensors` id+name list → `CSC.knownSensors.v1` rows; then remove legacy.
     private func migrateFromLegacyIfNeeded() -> [CSCKnownSensorRecord]? {
-        guard let data = appStorage.get(forKey: Self.legacyKey) as? Data, !data.isEmpty else { return nil }
+        guard let data = storage.get(forKey: Self.legacyKey) as? Data, !data.isEmpty else { return nil }
         guard let legacy = try? JSONDecoder().decode([LegacyKnownSensorEntry].self, from: data) else { return nil }
         if legacy.isEmpty {
-            appStorage.set(value: nil, forKey: Self.legacyKey)
+            storage.set(value: nil, forKey: Self.legacyKey)
             return nil
         }
         let def = CSCKnownSensorDefaults.defaultWheelDiameterMeters
@@ -75,7 +75,7 @@ final class CSCKnownSensorPersistenceAdapter: CSCKnownSensorPersistence {
             )
         }
         saveRecords(migrated)
-        appStorage.set(value: nil, forKey: Self.legacyKey)
+        storage.set(value: nil, forKey: Self.legacyKey)
         return migrated
     }
 }

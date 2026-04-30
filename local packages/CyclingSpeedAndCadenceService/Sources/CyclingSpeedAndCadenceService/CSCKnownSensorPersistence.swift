@@ -2,9 +2,9 @@
 //  CSCKnownSensorPersistence.swift
 //  CyclingSpeedAndCadenceService
 //
-//  Typed DTOs and a persistence port for per-manager known CSC sensors. Concrete
-//  storage (e.g. `UserDefaults` / `AppStorage`) lives in the app composition root
-//  (ADR-0005 per-manager persistence) / package independence.
+//  Typed DTOs and a persistence port for per-manager known CSC sensors.
+//  `DefaultCSCKnownSensorPersistence` is the runtime default over `Storage`; tests inject
+//  `CSCKnownSensorPersistence` via the sensor manager's internal initializer.
 
 import Foundation
 

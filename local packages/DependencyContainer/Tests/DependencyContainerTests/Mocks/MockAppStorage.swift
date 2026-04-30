@@ -5,6 +5,7 @@
 //  Created by Tony Tallman on 2/12/26.
 //
 
+import CyclingSpeedAndCadenceService
 import DependencyContainer
 import FitnessMachineService
 import Foundation
@@ -32,5 +33,6 @@ final class MockAppStorage: AppStorage {
     }
 }
 
+extension MockAppStorage: CyclingSpeedAndCadenceService.Storage {}
 extension MockAppStorage: FitnessMachineService.Storage {}
 extension MockAppStorage: HeartRateService.Storage {}

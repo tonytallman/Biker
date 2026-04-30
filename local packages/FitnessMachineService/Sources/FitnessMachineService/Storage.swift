@@ -29,7 +29,6 @@ public struct FTMSKnownSensorRecord: Codable, Equatable, Sendable {
     }
 }
 
-/// Key-value persistence port with the same method shape as the app’s `AppStorage` protocol; concrete storage types in `DependencyContainer` conform to this protocol.
 public protocol Storage {
     func get(forKey key: String) -> Any?
     func set(value: Any?, forKey key: String)
