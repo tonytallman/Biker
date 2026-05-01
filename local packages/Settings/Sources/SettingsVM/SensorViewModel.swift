@@ -6,6 +6,7 @@
 import Combine
 import Foundation
 import Observation
+import SettingsStrings
 
 @MainActor
 @Observable
@@ -14,6 +15,18 @@ package final class SensorViewModel {
     package var title: String
     package var connectionState: SensorConnectionState
     package var isEnabled: Bool
+
+    /// Human-readable status for list rows; includes "Disabled" when the sensor is off (BLE state is separate).
+    package var statusText: String {
+        if !isEnabled {
+            return String(
+                localized: "Sensor.Status.Disabled",
+                bundle: .settingsStrings,
+                comment: "BLE sensor is disabled in settings (not used for auto-connect or metrics)"
+            )
+        }
+        return connectionState.localizedStatusText
+    }
 
     /// The current ``Sensor`` from the app’s sensor provider (same id until replaced).
     package var sensor: any Sensor

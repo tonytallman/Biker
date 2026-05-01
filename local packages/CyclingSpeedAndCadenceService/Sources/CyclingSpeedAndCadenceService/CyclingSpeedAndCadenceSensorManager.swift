@@ -113,6 +113,11 @@ public final class CyclingSpeedAndCadenceSensorManager: NSObject {
 
     public func setEnabled(peripheralID: UUID, _ enabled: Bool) {
         sensorsByID[peripheralID]?.setEnabled(enabled)
+        if enabled {
+            reconnectDisconnectedKnownSensorsIfPoweredOn()
+        } else {
+            disconnect(peripheralID: peripheralID)
+        }
     }
 
     public func startScan() {
@@ -431,6 +436,11 @@ extension CyclingSpeedAndCadenceSensorManager {
         sensorsByID[peripheralID] = nil
         rebindDerivedMerge()
         rebindStoreSubscriptions()
+        rebuildAndPublish()
+    }
+
+    internal func _test_simulateDidDisconnect(peripheralID: UUID) {
+        sensorsByID[peripheralID]?.didDisconnect()
         rebuildAndPublish()
     }
 

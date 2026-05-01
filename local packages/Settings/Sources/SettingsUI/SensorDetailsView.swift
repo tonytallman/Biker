@@ -57,7 +57,7 @@ struct SensorDetailsView: View {
                 HStack {
                     Text("SensorDetails.Field.ConnectionState", bundle: .settingsStrings, comment: "Sensor Details: connection state field label")
                     Spacer()
-                    Text(viewModel.connectionState.localizedStatusText)
+                    Text(viewModel.statusText)
                         .foregroundStyle(.secondary)
                 }
             } header: {
@@ -82,14 +82,14 @@ struct SensorDetailsView: View {
                 } label: {
                     Text("SensorDetails.Action.Connect", bundle: .settingsStrings, comment: "Connect to the BLE sensor")
                 }
-                .disabled(viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
+                .disabled(!viewModel.isEnabled || viewModel.connectionState == .connected || viewModel.connectionState == .connecting)
 
                 Button {
                     viewModel.disconnect()
                 } label: {
                     Text("SensorDetails.Action.Disconnect", bundle: .settingsStrings, comment: "Disconnect the BLE sensor")
                 }
-                .disabled(viewModel.connectionState == .disconnected)
+                .disabled(!viewModel.isEnabled || viewModel.connectionState == .disconnected)
             } header: {
                 Text("SensorDetails.Section.Connection", bundle: .settingsStrings, comment: "Sensor Details: connection and enabled section")
             }

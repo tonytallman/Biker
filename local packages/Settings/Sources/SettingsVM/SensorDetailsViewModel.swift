@@ -6,6 +6,7 @@
 import Combine
 import Foundation
 import Observation
+import SettingsStrings
 
 /// Drives the Sensor Details screen (SEN-DET-1..6, SEN-KNOWN-1..5/7) with optional ``WheelDiameterAdjustable`` support (ADR-0002).
 @MainActor
@@ -16,6 +17,18 @@ public final class SensorDetailsViewModel {
     public let type: SensorType
     public private(set) var connectionState: SensorConnectionState
     public private(set) var isEnabled: Bool
+
+    /// Human-readable status; mirrors list rows (shows Disabled when toggled off).
+    public var statusText: String {
+        if !isEnabled {
+            return String(
+                localized: "Sensor.Status.Disabled",
+                bundle: .settingsStrings,
+                comment: "BLE sensor is disabled in settings (not used for auto-connect or metrics)"
+            )
+        }
+        return connectionState.localizedStatusText
+    }
     /// Non-nil if the sensor supports ``WheelDiameterAdjustable`` (CSC, etc.).
     public private(set) var wheelDiameter: Measurement<UnitLength>?
     /// Set after ``forget()`` so the view can pop (SEN-DET-4) without racing the known-sensor list.

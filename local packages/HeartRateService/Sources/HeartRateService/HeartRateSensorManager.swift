@@ -103,6 +103,11 @@ public final class HeartRateSensorManager: NSObject {
 
     public func setEnabled(peripheralID: UUID, _ enabled: Bool) {
         sensorsByID[peripheralID]?.setEnabled(enabled)
+        if enabled {
+            reconnectDisconnectedKnownSensorsIfPoweredOn()
+        } else {
+            disconnect(peripheralID: peripheralID)
+        }
     }
 
     public func startScan() {
@@ -385,6 +390,12 @@ extension HeartRateSensorManager {
         sensorsByID[peripheralID] = nil
         rebindMetricMerge()
         rebindStoreSubscriptions()
+        rebuildAndPublish()
+    }
+
+    /// Mirrors `centralManager(_:didDisconnectPeripheral:error:)` without `CBPeripheral` (unit tests).
+    internal func _test_simulateDidDisconnect(peripheralID: UUID) {
+        sensorsByID[peripheralID]?.didDisconnect()
         rebuildAndPublish()
     }
 

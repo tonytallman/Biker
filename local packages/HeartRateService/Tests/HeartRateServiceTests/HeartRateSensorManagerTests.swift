@@ -127,6 +127,61 @@ struct HeartRateSensorManagerTests {
         m.startScan()
         #expect(fake.scanForPeripheralsCallCount == 1)
     }
+
+    @Test func setEnabled_false_whenConnected_requestsCancelAndClearsHasConnectedAfterDisconnect() {
+        let id = UUID()
+        let fake = FakeHRCentral(state: .poweredOn, authorization: .allowedAlways)
+        let peripheral = FakeHRPeripheral(identifier: id, name: "HRM")
+        peripheral.state = .connected
+        fake.peripheralsById[id] = peripheral
+
+        let m = HeartRateSensorManager(persistence: InMemoryHRPersistence(), central: fake)
+        fake.onAuthorizationOrStateChange = { [weak m] in m?.handleBluetoothStateChange() }
+        m.handleBluetoothStateChange()
+
+        let sensor = makeSensor(id: id, name: "HRM", connected: true)
+        sensor.bind(peripheral: peripheral)
+        m._test_registerSensor(sensor)
+
+        var hasConnected = false
+        let sub = m.hasConnectedSensor.sink { hasConnected = $0 }
+        _ = sub
+        #expect(hasConnected == true)
+
+        m.setEnabled(peripheralID: id, false)
+        #expect(fake.cancelPeripheralConnectionCallCount == 1)
+        #expect(m.heartRateSensor(for: id)?.isEnabledValue == false)
+
+        m._test_simulateDidDisconnect(peripheralID: id)
+        #expect(hasConnected == false)
+    }
+
+    @Test func setEnabled_true_whenDisabledReconnectsIfPoweredOn() {
+        let id = UUID()
+        let fake = FakeHRCentral(state: .poweredOn, authorization: .allowedAlways)
+        let peripheral = FakeHRPeripheral(identifier: id, name: "HRM")
+        peripheral.state = .disconnected
+        fake.peripheralsById[id] = peripheral
+
+        let p = InMemoryHRPersistence(records: [
+            HRKnownSensorRecord(
+                id: id,
+                name: "HRM",
+                isEnabled: false
+            ),
+        ])
+        let m = HeartRateSensorManager(persistence: p, central: fake)
+        fake.onAuthorizationOrStateChange = { [weak m] in m?.handleBluetoothStateChange() }
+        m.handleBluetoothStateChange()
+
+        #expect(m.heartRateSensor(for: id)?.isEnabledValue == false)
+        #expect(fake.connectCallCount == 0)
+
+        m.setEnabled(peripheralID: id, true)
+        #expect(m.heartRateSensor(for: id)?.isEnabledValue == true)
+        #expect(fake.connectCallCount == 1)
+        #expect(fake.lastConnectPeripheral?.identifier == id)
+    }
 }
 
 @MainActor

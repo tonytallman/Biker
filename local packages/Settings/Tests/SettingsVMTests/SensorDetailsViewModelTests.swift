@@ -6,6 +6,7 @@
 import Foundation
 import Testing
 
+import SettingsStrings
 import SettingsVM
 
 @MainActor
@@ -111,5 +112,54 @@ struct SensorDetailsViewModelTests {
         #expect(vm.shouldDismiss == true)
         vm.acknowledgeDismissal()
         #expect(vm.shouldDismiss == false)
+    }
+
+    @Test("statusText is Disabled when sensor is off regardless of BLE state")
+    func testStatusTextDisabled() {
+        let sensor = MockPlainSensor(
+            id: UUID(),
+            name: "HR",
+            type: .heartRate,
+            connectionState: .connected,
+            isEnabled: false
+        )
+        let vm = SensorDetailsViewModel(sensor: sensor, dismiss: {})
+        let expectedDisabled = String(
+            localized: "Sensor.Status.Disabled",
+            bundle: .settingsStrings,
+            comment: "BLE sensor is disabled in settings (not used for auto-connect or metrics)"
+        )
+        #expect(vm.statusText == expectedDisabled)
+    }
+
+    @Test("statusText mirrors connection state when enabled")
+    func testStatusTextWhenEnabled() {
+        let sensor = MockPlainSensor(
+            id: UUID(),
+            name: "HR",
+            type: .heartRate,
+            connectionState: .connecting,
+            isEnabled: true
+        )
+        let vm = SensorDetailsViewModel(sensor: sensor, dismiss: {})
+        #expect(vm.statusText == SensorConnectionState.connecting.localizedStatusText)
+    }
+
+    @Test("SensorViewModel statusText matches details when disabled")
+    func testSensorViewModelStatusTextDisabled() {
+        let sensor = MockPlainSensor(
+            id: UUID(),
+            name: "Row",
+            type: .heartRate,
+            connectionState: .connected,
+            isEnabled: false
+        )
+        let row = SensorViewModel(sensor: sensor)
+        let expectedDisabled = String(
+            localized: "Sensor.Status.Disabled",
+            bundle: .settingsStrings,
+            comment: "BLE sensor is disabled in settings (not used for auto-connect or metrics)"
+        )
+        #expect(row.statusText == expectedDisabled)
     }
 }

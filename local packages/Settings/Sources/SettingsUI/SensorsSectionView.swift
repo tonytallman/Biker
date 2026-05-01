@@ -56,7 +56,7 @@ struct SensorsSectionView: View {
                     HStack {
                         Text(sensor.title)
                         Spacer()
-                        Text(sensor.connectionState.localizedStatusText)
+                        Text(sensor.statusText)
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }

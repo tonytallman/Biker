@@ -386,6 +386,17 @@
         }
       }
     },
+    "Sensor.Status.Disabled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disabled"
+          }
+        }
+      }
+    },
     "SensorDetails.Action.Connect" : {
       "extractionState" : "manual",
       "localizations" : {

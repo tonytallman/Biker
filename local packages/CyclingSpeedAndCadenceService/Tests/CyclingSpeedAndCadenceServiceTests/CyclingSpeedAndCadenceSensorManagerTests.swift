@@ -163,6 +163,62 @@ struct CyclingSpeedAndCadenceSensorManagerTests {
         #expect(last == idLo)
     }
 
+    @Test func setEnabled_false_whenConnected_requestsCancelAndClearsHasConnectedAfterDisconnect() {
+        let id = UUID()
+        let fake = FakeCSCCentral(state: .poweredOn, authorization: .allowedAlways)
+        let peripheral = FakeCSCPeripheral(identifier: id, name: "CSC")
+        peripheral.state = .connected
+        fake.peripheralsById[id] = peripheral
+
+        let m = CyclingSpeedAndCadenceSensorManager(persistence: InMemoryCSCPersistence(), central: fake)
+        fake.onAuthorizationOrStateChange = { [weak m] in m?.handleBluetoothStateChange() }
+        m.handleBluetoothStateChange()
+
+        let sensor = makeSensor(id: id, name: "CSC", connected: true)
+        sensor.bind(peripheral: peripheral)
+        m._test_registerSensor(sensor)
+
+        var hasConnected = false
+        let sub = m.hasConnectedSensor.sink { hasConnected = $0 }
+        _ = sub
+        #expect(hasConnected == true)
+
+        m.setEnabled(peripheralID: id, false)
+        #expect(fake.cancelPeripheralConnectionCallCount == 1)
+        #expect(m.cscSensor(for: id)?.isEnabledValue == false)
+
+        m._test_simulateDidDisconnect(peripheralID: id)
+        #expect(hasConnected == false)
+    }
+
+    @Test func setEnabled_true_whenDisabledReconnectsIfPoweredOn() {
+        let id = UUID()
+        let fake = FakeCSCCentral(state: .poweredOn, authorization: .allowedAlways)
+        let peripheral = FakeCSCPeripheral(identifier: id, name: "CSC")
+        peripheral.state = .disconnected
+        fake.peripheralsById[id] = peripheral
+
+        let p = InMemoryCSCPersistence(records: [
+            CSCKnownSensorRecord(
+                id: id,
+                name: "CSC",
+                isEnabled: false,
+                wheelDiameterMeters: 0.7
+            ),
+        ])
+        let m = CyclingSpeedAndCadenceSensorManager(persistence: p, central: fake)
+        fake.onAuthorizationOrStateChange = { [weak m] in m?.handleBluetoothStateChange() }
+        m.handleBluetoothStateChange()
+
+        #expect(m.cscSensor(for: id)?.isEnabledValue == false)
+        #expect(fake.connectCallCount == 0)
+
+        m.setEnabled(peripheralID: id, true)
+        #expect(m.cscSensor(for: id)?.isEnabledValue == true)
+        #expect(fake.connectCallCount == 1)
+        #expect(fake.lastConnectPeripheral?.identifier == id)
+    }
+
     private func makeSensor(
         id: UUID,
         name: String,
