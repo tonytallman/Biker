@@ -215,6 +215,10 @@ struct CyclingSpeedAndCadenceSensorManagerTests {
 
         m.setEnabled(peripheralID: id, true)
         #expect(m.cscSensor(for: id)?.isEnabledValue == true)
+        #expect(fake.scanForPeripheralsCallCount == 1)
+        #expect(fake.connectCallCount == 0)
+
+        m._test_simulateDidDiscover(peripheralID: id, name: "CSC")
         #expect(fake.connectCallCount == 1)
         #expect(fake.lastConnectPeripheral?.identifier == id)
     }

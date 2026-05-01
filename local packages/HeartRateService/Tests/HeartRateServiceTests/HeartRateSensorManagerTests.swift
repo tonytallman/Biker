@@ -179,6 +179,10 @@ struct HeartRateSensorManagerTests {
 
         m.setEnabled(peripheralID: id, true)
         #expect(m.heartRateSensor(for: id)?.isEnabledValue == true)
+        #expect(fake.scanForPeripheralsCallCount == 1)
+        #expect(fake.connectCallCount == 0)
+
+        m._test_simulateDidDiscover(peripheralID: id, name: "HRM")
         #expect(fake.connectCallCount == 1)
         #expect(fake.lastConnectPeripheral?.identifier == id)
     }

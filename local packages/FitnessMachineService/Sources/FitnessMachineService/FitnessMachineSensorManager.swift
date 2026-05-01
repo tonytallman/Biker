@@ -28,6 +28,10 @@ public final class FitnessMachineSensorManager: NSObject {
     private var sensorsByID: [UUID: FitnessMachineSensor] = [:]
     private var peripheralsByID: [UUID: any FTMSPeripheral] = [:]
     private var storeValueCancellables = Set<AnyCancellable>()
+    private var suppressAutoReconnectPeripheralIDs: Set<UUID> = []
+    private var userScanActive = false
+    private var backgroundScanActive = false
+    private var skipAutoReconnectForPeripheralID: UUID?
 
     public init(persistence: any Storage) {
         self.ftmsServiceUUID = CBUUID(string: "1826")
@@ -115,18 +119,31 @@ public final class FitnessMachineSensorManager: NSObject {
         discoveredSubject.send([])
 
         guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
+        userScanActive = true
+        startCentralScanIfNeeded()
+    }
 
+    public func stopScan() {
+        userScanActive = false
+        stopCentralScanIfIdle()
+    }
+
+    private func startCentralScanIfNeeded() {
+        guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
+        guard userScanActive || backgroundScanActive else { return }
         central.scanForPeripherals(
             withServices: [ftmsServiceUUID],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
 
-    public func stopScan() {
+    private func stopCentralScanIfIdle() {
+        guard !userScanActive && !backgroundScanActive else { return }
         central.stopScan()
     }
 
     public func connect(to peripheralID: UUID) {
+        suppressAutoReconnectPeripheralIDs.remove(peripheralID)
         guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
         guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
         let name = peripheral.name
@@ -145,15 +162,23 @@ public final class FitnessMachineSensorManager: NSObject {
     }
 
     public func disconnect(peripheralID: UUID) {
+        suppressAutoReconnectPeripheralIDs.insert(peripheralID)
         if let s = sensorsByID[peripheralID] {
             s.resetDerivedState()
         }
-        guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else { return }
-        guard peripheral.state == .connected || peripheral.state == .connecting else { return }
+        guard let peripheral = resolvePeripheral(peripheralID: peripheralID) else {
+            suppressAutoReconnectPeripheralIDs.remove(peripheralID)
+            return
+        }
+        guard peripheral.state == .connected || peripheral.state == .connecting else {
+            suppressAutoReconnectPeripheralIDs.remove(peripheralID)
+            return
+        }
         central.cancelPeripheralConnection(peripheral)
     }
 
     public func forget(peripheralID: UUID) {
+        suppressAutoReconnectPeripheralIDs.remove(peripheralID)
         if let peripheral = resolvePeripheral(peripheralID: peripheralID) {
             if peripheral.state == .connected || peripheral.state == .connecting {
                 central.cancelPeripheralConnection(peripheral)
@@ -184,13 +209,15 @@ public final class FitnessMachineSensorManager: NSObject {
         }
 
         if newAvailability != .poweredOn {
-            stopScan()
+            userScanActive = false
+            backgroundScanActive = false
+            skipAutoReconnectForPeripheralID = nil
+            central.stopScan()
             discoveredSubject.send([])
             markAllKnownSensorsDisconnectedByPolicy()
             rebuildAndPublish()
         } else if previous != .poweredOn {
-            reconnectKnownDisconnectedSensors()
-            rebuildAndPublish()
+            reconnectDisconnectedKnownSensorsIfPoweredOn()
         }
     }
 
@@ -259,15 +286,50 @@ public final class FitnessMachineSensorManager: NSObject {
         let name = peripheral.name
             ?? (advertisementData[CBAdvertisementDataLocalNameKey] as? String)
             ?? "Fitness machine"
-        let rssiValue = rssi.intValue
+        publishDiscoveredRow(id: id, name: name, rssi: rssi.intValue)
+        attemptAutoConnectFromDiscovery(peripheral: peripheral as any FTMSPeripheral)
+    }
+
+    private func publishDiscoveredRow(id: UUID, name: String, rssi: Int) {
         var list = discoveredSubject.value
         if let idx = list.firstIndex(where: { $0.id == id }) {
-            list[idx] = DiscoveredSensor(id: id, name: name, rssi: rssiValue)
+            list[idx] = DiscoveredSensor(id: id, name: name, rssi: rssi)
         } else {
-            list.append(DiscoveredSensor(id: id, name: name, rssi: rssiValue))
+            list.append(DiscoveredSensor(id: id, name: name, rssi: rssi))
         }
         list.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         discoveredSubject.send(list)
+    }
+
+    private func attemptAutoConnectFromDiscovery(peripheral: any FTMSPeripheral) {
+        guard backgroundScanActive else { return }
+        guard !hasAnySensorConnectingOrConnected else {
+            backgroundScanActive = false
+            stopCentralScanIfIdle()
+            return
+        }
+        let id = peripheral.identifier
+
+        if let skip = skipAutoReconnectForPeripheralID {
+            if skip == id { return }
+            if sensorsByID[id] != nil {
+                skipAutoReconnectForPeripheralID = nil
+            }
+        }
+
+        guard let sensor = sensorsByID[id], sensor.isEnabledValue,
+              sensor.connectedSensorSnapshot.connectionState == .disconnected else { return }
+
+        if let n = peripheral.name, !n.isEmpty {
+            sensor.updateName(n)
+        }
+        sensor.bind(peripheral: peripheral)
+        sensor.willEnterConnecting()
+        central.connect(peripheral, options: nil)
+
+        backgroundScanActive = false
+        stopCentralScanIfIdle()
+        rebuildAndPublish()
     }
 
     private func rebuildAndPublish() {
@@ -317,22 +379,32 @@ public final class FitnessMachineSensorManager: NSObject {
     }
 
     private func reconnectKnownDisconnectedSensors() {
-        let known = knownSensorsSubject.value
-        let toReconnect = known.filter { k in
-            k.connectionState == .disconnected && (sensorsByID[k.id]?.isEnabledValue ?? true)
+        guard availabilitySubject.value == .poweredOn, central.state == .poweredOn else { return }
+        guard !hasAnySensorConnectingOrConnected else { return }
+
+        let hasEligible = sensorsByID.values.contains {
+            $0.connectedSensorSnapshot.connectionState == .disconnected && $0.isEnabledValue
         }
-        guard !toReconnect.isEmpty else { return }
-        for known in toReconnect {
-            let retrieved = central.retrievePeripherals(withIdentifiers: [known.id])
-            guard let peripheral = retrieved.first else { continue }
-            peripheralsByID[peripheral.identifier] = peripheral
-            let name = peripheral.name ?? known.name
-            let sensor = sensorsByID[peripheral.identifier] ?? ensureSensor(id: known.id, name: name, persistIfNew: true)
-            sensor.updateName(name)
-            sensor.bind(peripheral: peripheral)
-            sensor.willEnterConnecting()
-            central.connect(peripheral, options: nil)
+        guard hasEligible else { return }
+
+        backgroundScanActive = true
+        startCentralScanIfNeeded()
+    }
+
+    private var hasAnySensorConnectingOrConnected: Bool {
+        sensorsByID.values.contains {
+            switch $0.connectedSensorSnapshot.connectionState {
+            case .connecting, .connected: true
+            case .disconnected: false
+            }
         }
+    }
+
+    private func resumeAutoReconnectUnlessUserDisconnected(peripheralID: UUID) {
+        if suppressAutoReconnectPeripheralIDs.remove(peripheralID) != nil {
+            return
+        }
+        reconnectDisconnectedKnownSensorsIfPoweredOn()
     }
 }
 
@@ -365,12 +437,17 @@ extension FitnessMachineSensorManager: @MainActor CBCentralManagerDelegate {
         s.bind(peripheral: peripheral)
         peripheral.delegate = s
         s.didConnect()
+        skipAutoReconnectForPeripheralID = nil
+        backgroundScanActive = false
+        stopCentralScanIfIdle()
         rebuildAndPublish()
     }
 
     public func centralManager(_: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        skipAutoReconnectForPeripheralID = peripheral.identifier
         sensorsByID[peripheral.identifier]?.didFailToConnect()
         rebuildAndPublish()
+        reconnectDisconnectedKnownSensorsIfPoweredOn()
     }
 
     public func centralManager(
@@ -378,8 +455,10 @@ extension FitnessMachineSensorManager: @MainActor CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        sensorsByID[peripheral.identifier]?.didDisconnect()
+        let id = peripheral.identifier
+        sensorsByID[id]?.didDisconnect()
         rebuildAndPublish()
+        resumeAutoReconnectUnlessUserDisconnected(peripheralID: id)
     }
 }
 
@@ -403,5 +482,31 @@ extension FitnessMachineSensorManager {
     /// Publishes a discovered row snapshot (e.g. DependencyContainer integration tests, no GATT).
     internal func _test_publishDiscovered(_ sensors: [DiscoveredSensor]) {
         discoveredSubject.send(sensors)
+    }
+
+    internal func _test_simulateDidDisconnect(peripheralID: UUID) {
+        sensorsByID[peripheralID]?.didDisconnect()
+        rebuildAndPublish()
+        resumeAutoReconnectUnlessUserDisconnected(peripheralID: peripheralID)
+    }
+
+    internal func _test_simulateDidFailToConnect(peripheralID: UUID) {
+        skipAutoReconnectForPeripheralID = peripheralID
+        sensorsByID[peripheralID]?.didFailToConnect()
+        rebuildAndPublish()
+        reconnectDisconnectedKnownSensorsIfPoweredOn()
+    }
+
+    internal func _test_simulateDidDiscover(peripheralID: UUID, name: String, rssi: Int = -50) {
+        let peripheral: any FTMSPeripheral
+        if let existing = peripheralsByID[peripheralID] {
+            peripheral = existing
+        } else if let resolved = resolvePeripheral(peripheralID: peripheralID) {
+            peripheral = resolved
+        } else {
+            return
+        }
+        publishDiscoveredRow(id: peripheralID, name: name, rssi: rssi)
+        attemptAutoConnectFromDiscovery(peripheral: peripheral)
     }
 }
