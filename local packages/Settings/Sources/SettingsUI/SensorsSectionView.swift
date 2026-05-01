@@ -23,22 +23,6 @@ struct SensorsSectionView: View {
         } header: {
             sectionHeader
         }
-        .sheet(isPresented: $showingScanSheet) {
-            Group {
-                if let scanVM = viewModel.makeScanViewModel() {
-                    ScanView(viewModel: scanVM)
-                }
-            }
-        }
-        .onChange(of: viewModel.shouldDismissScanSheet) { _, should in
-            if should {
-                showingScanSheet = false
-                viewModel.acknowledgeScanSheetDismissal()
-            }
-        }
-        .navigationDestination(for: UUID.self) { id in
-            SensorDetailsNavigationHost(sensorID: id, sensorsSection: viewModel)
-        }
     }
 
     @ViewBuilder
@@ -117,6 +101,19 @@ struct SensorsSectionView: View {
                 .accessibilityLabel(
                     String(localized: "Scan for sensors", bundle: .settingsStrings, comment: "Accessibility: add a sensor via scan sheet")
                 )
+                .sheet(isPresented: $showingScanSheet) {
+                    Group {
+                        if let scanVM = viewModel.makeScanViewModel() {
+                            ScanView(viewModel: scanVM)
+                        }
+                    }
+                }
+            }
+        }
+        .onChange(of: viewModel.shouldDismissScanSheet) { _, should in
+            if should {
+                showingScanSheet = false
+                viewModel.acknowledgeScanSheetDismissal()
             }
         }
     }
@@ -172,7 +169,7 @@ private struct SensorsSectionPreviewHost: View {
 
 // MARK: - Sensor Details: dismiss when known row removed upstream (SEN-DET-4)
 
-private struct SensorDetailsNavigationHost: View {
+struct SensorDetailsNavigationHost: View {
     let sensorID: UUID
     @Bindable var sensorsSection: SensorsSectionViewModel
     @Environment(\.dismiss) private var dismiss
