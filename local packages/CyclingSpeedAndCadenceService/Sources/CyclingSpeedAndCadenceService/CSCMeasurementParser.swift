@@ -147,26 +147,38 @@ public struct CSCDeltaCalculator {
         var distanceDelta: Double?
         if let w0 = prev.wheel, let w1 = measurement.wheel {
             let revDelta = wrappingDeltaUInt32(old: w0.cumulativeRevolutions, new: w1.cumulativeRevolutions)
-            let timeDeltaSec = wrappingDeltaTimeSeconds(
-                old: w0.lastEventTime1024,
-                new: w1.lastEventTime1024
-            )
-            if let dt = timeDeltaSec, dt > 0, revDelta > 0 {
-                let revD = Double(revDelta)
-                distanceDelta = revD * wheelCircumferenceMeters
-                speed = distanceDelta! / dt
+            let timeDelta1024 = UInt32(wrappingDeltaUInt16(old: w0.lastEventTime1024, new: w1.lastEventTime1024))
+            if revDelta == 0, timeDelta1024 == 0 {
+                // No new wheel event since last sample (typical when stopped; CSC keeps notifying with frozen fields).
+                speed = 0
+                distanceDelta = 0
+            } else {
+                let timeDeltaSec = wrappingDeltaTimeSeconds(
+                    old: w0.lastEventTime1024,
+                    new: w1.lastEventTime1024
+                )
+                if let dt = timeDeltaSec, dt > 0, revDelta > 0 {
+                    let revD = Double(revDelta)
+                    distanceDelta = revD * wheelCircumferenceMeters
+                    speed = distanceDelta! / dt
+                }
             }
         }
 
         var cadenceRPM: Double?
         if let c0 = prev.crank, let c1 = measurement.crank {
             let revDelta = wrappingDeltaUInt16(old: c0.cumulativeRevolutions, new: c1.cumulativeRevolutions)
-            let timeDeltaSec = wrappingDeltaTimeSeconds(
-                old: c0.lastEventTime1024,
-                new: c1.lastEventTime1024
-            )
-            if let dt = timeDeltaSec, dt > 0, revDelta > 0 {
-                cadenceRPM = Double(revDelta) / dt * 60.0
+            let timeDelta1024 = UInt32(wrappingDeltaUInt16(old: c0.lastEventTime1024, new: c1.lastEventTime1024))
+            if revDelta == 0, timeDelta1024 == 0 {
+                cadenceRPM = 0
+            } else {
+                let timeDeltaSec = wrappingDeltaTimeSeconds(
+                    old: c0.lastEventTime1024,
+                    new: c1.lastEventTime1024
+                )
+                if let dt = timeDeltaSec, dt > 0, revDelta > 0 {
+                    cadenceRPM = Double(revDelta) / dt * 60.0
+                }
             }
         }
 

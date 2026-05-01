@@ -47,6 +47,70 @@ struct CSCDeltaCalculatorTests {
         #expect(calc.push(m1) == nil)
     }
 
+    @Test func wheelStopped_emitsZeroSpeedAndDistance() throws {
+        var calc = CSCDeltaCalculator(wheelCircumferenceMeters: 2.0)
+        let wheel = CSCWheelSample(cumulativeRevolutions: 100, lastEventTime1024: 5000)
+        let m0 = CSCMeasurement(wheel: wheel, crank: nil)
+        #expect(calc.push(m0) == nil)
+
+        let m1 = CSCMeasurement(wheel: wheel, crank: nil)
+        guard let u = calc.push(m1) else {
+            Issue.record("Expected stopped update")
+            return
+        }
+        #expect(u.speedMetersPerSecond == 0)
+        #expect(u.distanceDeltaMeters == 0)
+        #expect(u.cadenceRPM == nil)
+    }
+
+    @Test func crankStopped_emitsZeroCadence() throws {
+        var calc = CSCDeltaCalculator()
+        let crank = CSCCrankSample(cumulativeRevolutions: 50, lastEventTime1024: 2000)
+        let m0 = CSCMeasurement(wheel: nil, crank: crank)
+        #expect(calc.push(m0) == nil)
+
+        let m1 = CSCMeasurement(wheel: nil, crank: crank)
+        guard let u = calc.push(m1) else {
+            Issue.record("Expected stopped cadence update")
+            return
+        }
+        #expect(u.cadenceRPM == 0)
+        #expect(u.speedMetersPerSecond == nil)
+        #expect(u.distanceDeltaMeters == nil)
+    }
+
+    @Test func bothStopped_emitsAllZeros() throws {
+        var calc = CSCDeltaCalculator(wheelCircumferenceMeters: 1.0)
+        let w = CSCWheelSample(cumulativeRevolutions: 10, lastEventTime1024: 100)
+        let c = CSCCrankSample(cumulativeRevolutions: 5, lastEventTime1024: 200)
+        let m0 = CSCMeasurement(wheel: w, crank: c)
+        #expect(calc.push(m0) == nil)
+
+        let m1 = CSCMeasurement(wheel: w, crank: c)
+        guard let u = calc.push(m1) else {
+            Issue.record("Expected both stopped")
+            return
+        }
+        #expect(u.speedMetersPerSecond == 0)
+        #expect(u.distanceDeltaMeters == 0)
+        #expect(u.cadenceRPM == 0)
+    }
+
+    @Test func wheelRevZeroButTimeAdvances_doesNotEmitStoppedOrSpeed() throws {
+        var calc = CSCDeltaCalculator(wheelCircumferenceMeters: 2.0)
+        let m0 = CSCMeasurement(
+            wheel: CSCWheelSample(cumulativeRevolutions: 7, lastEventTime1024: 100),
+            crank: nil
+        )
+        #expect(calc.push(m0) == nil)
+
+        let m1 = CSCMeasurement(
+            wheel: CSCWheelSample(cumulativeRevolutions: 7, lastEventTime1024: 200),
+            crank: nil
+        )
+        #expect(calc.push(m1) == nil)
+    }
+
     @Test func crankCadence() throws {
         var calc = CSCDeltaCalculator()
         let m0 = CSCMeasurement(

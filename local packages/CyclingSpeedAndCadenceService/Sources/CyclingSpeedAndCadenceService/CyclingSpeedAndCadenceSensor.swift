@@ -19,6 +19,9 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
 
     private var calculator: CSCDeltaCalculator
     private var peripheralRef: (any CSCPeripheral)?
+    private let idleScheduler: any CSCIdleScheduler
+    private let idleTimeout: TimeInterval
+    private var idleCancellable: AnyCancellable?
 
     private let speedSubject = CurrentValueSubject<Double?, Never>(nil)
     private let cadenceSubject = CurrentValueSubject<Double?, Never>(nil)
@@ -69,12 +72,34 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
         ConnectedSensor(id: id, name: storedName, connectionState: connectionStateSubject.value)
     }
 
-    public init(
+    /// App / composition root: default idle timeout and main-queue scheduler.
+    public convenience init(
         id: UUID,
         name: String,
         initialConnectionState: ConnectionState,
         initialWheelDiameter: Measurement<UnitLength>? = nil,
         initialIsEnabled: Bool? = nil
+    ) {
+        self.init(
+            id: id,
+            name: name,
+            initialConnectionState: initialConnectionState,
+            initialWheelDiameter: initialWheelDiameter,
+            initialIsEnabled: initialIsEnabled,
+            idleTimeout: 3.0,
+            idleScheduler: DispatchQueueIdleScheduler()
+        )
+    }
+
+    /// Designated: inject idle scheduling (tests).
+    internal init(
+        id: UUID,
+        name: String,
+        initialConnectionState: ConnectionState,
+        initialWheelDiameter: Measurement<UnitLength>? = nil,
+        initialIsEnabled: Bool? = nil,
+        idleTimeout: TimeInterval,
+        idleScheduler: any CSCIdleScheduler
     ) {
         self.id = id
         self.storedName = name
@@ -86,6 +111,8 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
         let wheel = initialWheelDiameter ?? defaultDiameter
         self.wheelDiameterSubject = CurrentValueSubject(wheel)
         self.isEnabledSubject = CurrentValueSubject(initialIsEnabled ?? true)
+        self.idleTimeout = idleTimeout
+        self.idleScheduler = idleScheduler
         self.calculator = CSCDeltaCalculator(
             wheelCircumferenceMeters: Self.circumferenceMeters(
                 forWheelDiameter: wheel
@@ -127,6 +154,9 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
 
     public func setEnabled(_ enabled: Bool) {
         isEnabledSubject.send(enabled)
+        if !enabled {
+            cancelIdleTimer()
+        }
     }
 
     public func didConnect() {
@@ -158,6 +188,7 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
 
     /// Called when the user requests disconnect, before the central cancels the connection (matches legacy pre-clear of calculator).
     public func resetDerivedState() {
+        cancelIdleTimer()
         calculator.reset()
         speedSubject.send(nil)
         cadenceSubject.send(nil)
@@ -179,10 +210,52 @@ public final class CyclingSpeedAndCadenceSensor: NSObject {
         guard isEnabledSubject.value else { return }
         guard case let .success(measurement) = CSCMeasurementParser.parse(data) else { return }
         guard let u = calculator.push(measurement) else { return }
+        publishDerived(u)
+    }
+
+    private func publishDerived(_ u: CSCDerivedUpdate) {
         speedSubject.send(u.speedMetersPerSecond)
         cadenceSubject.send(u.cadenceRPM)
         distanceDeltaSubject.send(u.distanceDeltaMeters)
         derivedSubject.send(u)
+        armIdleTimer()
+    }
+
+    private func armIdleTimer() {
+        idleCancellable?.cancel()
+        idleCancellable = idleScheduler.schedule(after: idleTimeout) { [weak self] in
+            self?.fireIdleIfNeeded()
+        }
+    }
+
+    private func cancelIdleTimer() {
+        idleCancellable?.cancel()
+        idleCancellable = nil
+    }
+
+    /// After `idleTimeout` without a new derived update, force non-zero channels to 0 (silent peripheral safety net).
+    private func fireIdleIfNeeded() {
+        idleCancellable = nil
+        var speedOut = speedSubject.value
+        var cadenceOut = cadenceSubject.value
+        var didChange = false
+        if let s = speedSubject.value, s != 0 {
+            speedOut = 0
+            speedSubject.send(0)
+            didChange = true
+        }
+        if let c = cadenceSubject.value, c != 0 {
+            cadenceOut = 0
+            cadenceSubject.send(0)
+            didChange = true
+        }
+        guard didChange else { return }
+        distanceDeltaSubject.send(0)
+        derivedSubject.send(CSCDerivedUpdate(
+            speedMetersPerSecond: speedOut,
+            cadenceRPM: cadenceOut,
+            distanceDeltaMeters: 0
+        ))
     }
 }
 
