@@ -13,6 +13,8 @@ import SettingsStrings
 package final class SensorViewModel {
     package let sensorID: UUID
     package let type: SensorType
+    /// Row key for lists and navigation when one peripheral advertises multiple services (ADR-0011).
+    package var rowID: SensorRowID { SensorRowID(sensorID: sensorID, type: type) }
     package var title: String
     package var connectionState: SensorConnectionState
     package var isEnabled: Bool
@@ -61,6 +63,7 @@ package final class SensorViewModel {
     /// When the provider emits a new `any Sensor` for the same id, rebind streams.
     package func replaceSensorIfNeeded(_ newSensor: any Sensor) {
         guard newSensor.id == sensorID else { return }
+        guard newSensor.type == type else { return }
         guard ObjectIdentifier(newSensor as AnyObject) != ObjectIdentifier(sensor as AnyObject) else { return }
         sensor = newSensor
         bind()

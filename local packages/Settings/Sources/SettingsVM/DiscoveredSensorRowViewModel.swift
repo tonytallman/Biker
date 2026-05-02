@@ -10,7 +10,7 @@ import Observation
 @MainActor
 @Observable
 package final class DiscoveredSensorRowViewModel: Identifiable {
-    package let id: UUID
+    package let id: SensorRowID
     package let type: SensorType
     package var name: String
     /// Present only when the underlying sensor conforms to `SignalStrengthReporting`.
@@ -21,7 +21,7 @@ package final class DiscoveredSensorRowViewModel: Identifiable {
 
     package init(sensor: any Sensor) {
         self.sensor = sensor
-        self.id = sensor.id
+        self.id = SensorRowID(sensorID: sensor.id, type: sensor.type)
         self.type = sensor.type
         self.name = sensor.name
 

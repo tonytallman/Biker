@@ -14,13 +14,14 @@ package final class SensorsSectionViewModel {
     private let sensorAvailabilityPublisher: AnyPublisher<SensorAvailability, Never>
     private var cancellables: Set<AnyCancellable> = []
     private var providerCancellables: Set<AnyCancellable> = []
-    private var knownSensorViewModels: [UUID: SensorViewModel] = [:]
+    private var knownSensorViewModels: [SensorRowID: SensorViewModel] = [:]
     private var lastWiredProvider: AnyObject?
     private var priorEmissionWasAvailable = false
 
     package private(set) var knownSensors: [SensorViewModel] = []
     /// Ids in the current known-sensor list; used to pop Sensor Details when a row is removed upstream (SEN-DET-4).
-    package private(set) var knownSensorIDs: Set<UUID> = []
+    /// Row ids in the current known-sensor list; used to pop Sensor Details when a row is removed upstream (SEN-DET-4, ADR-0011).
+    package private(set) var knownSensorIDs: Set<SensorRowID> = []
     /// Current gating of sensor lists and the ``SensorProvider`` (ADR-0009).
     package private(set) var currentSensorAvailability: SensorAvailability = .notDetermined
     /// Set when `SensorAvailability` transitions from ``SensorAvailability/available(_:)`` to a non-ready case while the scan sheet may be open (SEN-SCAN-3).
@@ -71,25 +72,25 @@ package final class SensorsSectionViewModel {
     }
 
     private func reconcileKnownSensors(_ sensors: [any Sensor]) {
-        var seen = Set<UUID>()
+        var seen = Set<SensorRowID>()
         var ordered: [SensorViewModel] = []
         for sensor in sensors {
-            let id = sensor.id
-            seen.insert(id)
-            if let existing = knownSensorViewModels[id] {
+            let rowID = SensorRowID(sensorID: sensor.id, type: sensor.type)
+            seen.insert(rowID)
+            if let existing = knownSensorViewModels[rowID] {
                 existing.replaceSensorIfNeeded(sensor)
                 ordered.append(existing)
             } else {
                 let vm = SensorViewModel(sensor: sensor)
-                knownSensorViewModels[id] = vm
+                knownSensorViewModels[rowID] = vm
                 ordered.append(vm)
             }
         }
-        for id in knownSensorViewModels.keys where !seen.contains(id) {
-            knownSensorViewModels.removeValue(forKey: id)
+        for key in knownSensorViewModels.keys where !seen.contains(key) {
+            knownSensorViewModels.removeValue(forKey: key)
         }
         knownSensors = ordered
-        knownSensorIDs = Set(ordered.map(\.sensorID))
+        knownSensorIDs = Set(ordered.map(\.rowID))
     }
 
     package func scanForSensors() {
@@ -105,9 +106,9 @@ package final class SensorsSectionViewModel {
         return nil
     }
 
-    /// Builds a details view model for a known sensor; returns nil if the id is not in the list.
-    package func makeSensorDetailsViewModel(for id: UUID, dismiss: @escaping () -> Void) -> SensorDetailsViewModel? {
-        guard let row = knownSensorViewModels[id] else { return nil }
+    /// Builds a details view model for a known sensor; returns nil if the row is not in the list.
+    package func makeSensorDetailsViewModel(for rowID: SensorRowID, dismiss: @escaping () -> Void) -> SensorDetailsViewModel? {
+        guard let row = knownSensorViewModels[rowID] else { return nil }
         return SensorDetailsViewModel(sensor: row.sensor, dismiss: dismiss)
     }
 
@@ -116,11 +117,11 @@ package final class SensorsSectionViewModel {
         shouldDismissScanSheet = false
     }
 
-    package func disconnectSensor(id: UUID) {
-        knownSensorViewModels[id]?.disconnect()
+    package func disconnectSensor(rowID: SensorRowID) {
+        knownSensorViewModels[rowID]?.disconnect()
     }
 
-    package func forgetSensor(id: UUID) {
-        knownSensorViewModels[id]?.forget()
+    package func forgetSensor(rowID: SensorRowID) {
+        knownSensorViewModels[rowID]?.forget()
     }
 }

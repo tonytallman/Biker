@@ -51,8 +51,8 @@ struct SensorsSectionView: View {
                 }
             }
         case .normal:
-            ForEach(viewModel.knownSensors, id: \.sensorID) { sensor in
-                NavigationLink(value: sensor.sensorID) {
+            ForEach(viewModel.knownSensors, id: \.rowID) { sensor in
+                NavigationLink(value: sensor.rowID) {
                     HStack {
                         Image(systemName: sensor.type.sfSymbolName)
                             .symbolRenderingMode(.hierarchical)
@@ -67,7 +67,7 @@ struct SensorsSectionView: View {
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     Button(role: .destructive) {
-                        viewModel.forgetSensor(id: sensor.sensorID)
+                        viewModel.forgetSensor(rowID: sensor.rowID)
                     } label: {
                         Label(
                             String(localized: "Forget", bundle: .settingsStrings, comment: "Remove a known BLE sensor from the list"),
@@ -76,7 +76,7 @@ struct SensorsSectionView: View {
                     }
                     if sensor.connectionState == .connected || sensor.connectionState == .connecting {
                         Button {
-                            viewModel.disconnectSensor(id: sensor.sensorID)
+                            viewModel.disconnectSensor(rowID: sensor.rowID)
                         } label: {
                             Label(
                                 String(localized: "Disconnect", bundle: .settingsStrings, comment: "Drop BLE connection but keep sensor known"),
@@ -174,19 +174,19 @@ private struct SensorsSectionPreviewHost: View {
 // MARK: - Sensor Details: dismiss when known row removed upstream (SEN-DET-4)
 
 struct SensorDetailsNavigationHost: View {
-    let sensorID: UUID
+    let rowID: SensorRowID
     @Bindable var sensorsSection: SensorsSectionViewModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
             if let detailsVM = sensorsSection.makeSensorDetailsViewModel(
-                for: sensorID,
+                for: rowID,
                 dismiss: { dismiss() }
             ) {
                 SensorDetailsView(viewModel: detailsVM)
                     .onChange(of: sensorsSection.knownSensorIDs) { _, ids in
-                        if !ids.contains(sensorID) {
+                        if !ids.contains(rowID) {
                             dismiss()
                         }
                     }

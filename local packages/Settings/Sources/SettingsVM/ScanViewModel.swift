@@ -43,8 +43,8 @@ package final class ScanViewModel {
         sensorProvider.stopScan()
     }
 
-    package func connect(sensorID: UUID) {
-        if let row = discoveredSensors.first(where: { $0.id == sensorID }) {
+    package func connect(rowID: SensorRowID) {
+        if let row = discoveredSensors.first(where: { $0.id == rowID }) {
             row.connect()
         }
         stopScan()

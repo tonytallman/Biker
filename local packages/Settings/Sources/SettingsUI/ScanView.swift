@@ -36,7 +36,7 @@ struct ScanView: View {
                 } else {
                     List(viewModel.discoveredSensors) { row in
                         Button {
-                            viewModel.connect(sensorID: row.id)
+                            viewModel.connect(rowID: row.id)
                             dismiss()
                         } label: {
                             HStack {
