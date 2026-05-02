@@ -54,6 +54,10 @@ struct SensorsSectionView: View {
             ForEach(viewModel.knownSensors, id: \.sensorID) { sensor in
                 NavigationLink(value: sensor.sensorID) {
                     HStack {
+                        Image(systemName: sensor.type.sfSymbolName)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel(sensor.type.localizedName)
                         Text(sensor.title)
                         Spacer()
                         Text(sensor.statusText)

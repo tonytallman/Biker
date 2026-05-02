@@ -11,6 +11,7 @@ import Observation
 @Observable
 package final class DiscoveredSensorRowViewModel: Identifiable {
     package let id: UUID
+    package let type: SensorType
     package var name: String
     /// Present only when the underlying sensor conforms to `SignalStrengthReporting`.
     package var rssi: Int?
@@ -21,6 +22,7 @@ package final class DiscoveredSensorRowViewModel: Identifiable {
     package init(sensor: any Sensor) {
         self.sensor = sensor
         self.id = sensor.id
+        self.type = sensor.type
         self.name = sensor.name
 
         if let strength = sensor as? any SignalStrengthReporting {

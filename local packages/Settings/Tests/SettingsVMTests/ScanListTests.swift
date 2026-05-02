@@ -34,6 +34,41 @@ struct ScanListTests {
         #expect(scanVM.discoveredSensors.map(\.name) == ["Zebra", "alpha"])
     }
 
+    @Test("discovered rows expose sensor type for scan-list icons (#37)")
+    func testDiscoveredRowsExposeSensorType() {
+        let mock = MockSensorProvider()
+        let idCSC = UUID()
+        let idFTMS = UUID()
+        let idHR = UUID()
+        let csc: any Sensor = MockSensorWithRSSI(
+            id: idCSC,
+            name: "Outdoor",
+            type: .cyclingSpeedAndCadence,
+            rssi: -50
+        )
+        let ftms: any Sensor = MockSensorWithRSSI(
+            id: idFTMS,
+            name: "Indoor",
+            type: .fitnessMachine,
+            rssi: -55
+        )
+        let hr: any Sensor = MockSensorWithRSSI(
+            id: idHR,
+            name: "Pulse",
+            type: .heartRate,
+            rssi: -60
+        )
+        mock.setDiscoveredSensors([csc, ftms, hr])
+
+        let scanVM = ScanViewModel(sensorProvider: mock)
+        #expect(scanVM.discoveredSensors.count == 3)
+
+        let byId = Dictionary(uniqueKeysWithValues: scanVM.discoveredSensors.map { ($0.id, $0.type) })
+        #expect(byId[idCSC] == .cyclingSpeedAndCadence)
+        #expect(byId[idFTMS] == .fitnessMachine)
+        #expect(byId[idHR] == .heartRate)
+    }
+
     @Test("connect invokes sensor connect and stops scanning")
     func testConnectForwardsAndStopsScan() {
         let mock = MockSensorProvider()

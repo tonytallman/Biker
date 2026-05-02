@@ -22,4 +22,16 @@ public enum SensorType: Sendable, Hashable, CaseIterable {
             String(localized: "SensorType.HeartRate", bundle: .settingsStrings, comment: "Display name for heart rate sensor type")
         }
     }
+
+    /// SF Symbol for list/detail chrome (known-sensor row, etc.); GitHub #37.
+    public var sfSymbolName: String {
+        switch self {
+        case .cyclingSpeedAndCadence:
+            "figure.outdoor.cycle.circle"
+        case .fitnessMachine:
+            "figure.indoor.cycle.circle"
+        case .heartRate:
+            "heart.circle"
+        }
+    }
 }

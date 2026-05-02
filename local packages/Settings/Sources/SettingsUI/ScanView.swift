@@ -40,6 +40,10 @@ struct ScanView: View {
                             dismiss()
                         } label: {
                             HStack {
+                                Image(systemName: row.type.sfSymbolName)
+                                    .symbolRenderingMode(.hierarchical)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityLabel(row.type.localizedName)
                                 Text(row.name)
                                 Spacer()
                                 if let rssi = row.rssi {

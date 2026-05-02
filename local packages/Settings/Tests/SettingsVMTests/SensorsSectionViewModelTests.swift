@@ -108,6 +108,26 @@ struct SensorsSectionViewModelTests {
         #expect(section.knownSensors.first?.sensorID == id)
     }
 
+    @Test("known-sensor row view models expose sensor type for icons (#37)")
+    func knownSensorRowsExposeSensorType() {
+        let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
+        let idCSC = UUID()
+        let idFTMS = UUID()
+        let idHR = UUID()
+        let csc: any Sensor = MockPlainSensor(id: idCSC, name: "CSC", type: .cyclingSpeedAndCadence)
+        let ftms: any Sensor = MockPlainSensor(id: idFTMS, name: "Trainer", type: .fitnessMachine)
+        let hr: any Sensor = MockPlainSensor(id: idHR, name: "HRM", type: .heartRate)
+        mock.provider.setKnownSensors([csc, ftms, hr])
+
+        let section = makeSectionVM(mockAvailability: mock)
+        #expect(section.knownSensors.count == 3)
+
+        let byId = Dictionary(uniqueKeysWithValues: section.knownSensors.map { ($0.sensorID, $0.type) })
+        #expect(byId[idCSC] == .cyclingSpeedAndCadence)
+        #expect(byId[idFTMS] == .fitnessMachine)
+        #expect(byId[idHR] == .heartRate)
+    }
+
     @Test("per-row connection state updates when mock sensor publishes")
     func testConnectionStateReactive() {
         let mock = MockSensorAvailability(initialBluetooth: .poweredOn)

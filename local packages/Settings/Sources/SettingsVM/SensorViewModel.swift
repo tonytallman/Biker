@@ -12,6 +12,7 @@ import SettingsStrings
 @Observable
 package final class SensorViewModel {
     package let sensorID: UUID
+    package let type: SensorType
     package var title: String
     package var connectionState: SensorConnectionState
     package var isEnabled: Bool
@@ -35,6 +36,7 @@ package final class SensorViewModel {
     package init(sensor: any Sensor) {
         self.sensor = sensor
         self.sensorID = sensor.id
+        self.type = sensor.type
         self.title = sensor.name
         self.connectionState = .disconnected
         self.isEnabled = true
