@@ -12,14 +12,17 @@ public enum FTMSParseError: Error, Equatable, Sendable {
     case dataTooShort(minimumBytes: Int)
 }
 
-/// Parsed Indoor Bike Data notification (instantaneous speed / cadence when present).
+/// Parsed Indoor Bike Data notification (instantaneous speed / cadence / total distance when present).
 public struct IndoorBikeData: Equatable, Sendable {
     public let speedMetersPerSecond: Double?
     public let cadenceRPM: Double?
+    /// Total accumulated distance (last 24 bits of the field) in meters when the Total Distance flag is set.
+    public let totalDistanceMeters: Double?
 
-    public init(speedMetersPerSecond: Double?, cadenceRPM: Double?) {
+    public init(speedMetersPerSecond: Double?, cadenceRPM: Double?, totalDistanceMeters: Double? = nil) {
         self.speedMetersPerSecond = speedMetersPerSecond
         self.cadenceRPM = cadenceRPM
+        self.totalDistanceMeters = totalDistanceMeters
     }
 }
 
@@ -47,6 +50,7 @@ public enum IndoorBikeDataParser {
         var o = 2
         var speed: Double?
         var cadence: Double?
+        var totalDistance: Double?
 
         // Bit 0 "More Data": when set, Instantaneous Speed is omitted.
         if flags & flagMoreData == 0 {
@@ -82,6 +86,8 @@ public enum IndoorBikeDataParser {
         if flags & flagTotalDistance != 0 {
             let need = o + 3
             guard data.count >= need else { return .failure(.dataTooShort(minimumBytes: need)) }
+            let raw24 = readUInt24LE(data, offset: o)
+            totalDistance = Double(raw24)
             o += 3
         }
 
@@ -133,7 +139,11 @@ public enum IndoorBikeDataParser {
             o += 2
         }
 
-        return .success(IndoorBikeData(speedMetersPerSecond: speed, cadenceRPM: cadence))
+        return .success(IndoorBikeData(
+            speedMetersPerSecond: speed,
+            cadenceRPM: cadence,
+            totalDistanceMeters: totalDistance
+        ))
     }
 
     private static func readUInt16LE(_ data: Data, offset: Int) -> UInt16 {
@@ -141,5 +151,13 @@ public enum IndoorBikeDataParser {
         let lo = UInt16(data[i])
         let hi = UInt16(data[i + 1]) << 8
         return lo | hi
+    }
+
+    private static func readUInt24LE(_ data: Data, offset: Int) -> UInt32 {
+        let i = data.startIndex + offset
+        let b0 = UInt32(data[i])
+        let b1 = UInt32(data[i + 1]) << 8
+        let b2 = UInt32(data[i + 2]) << 16
+        return b0 | b1 | b2
     }
 }

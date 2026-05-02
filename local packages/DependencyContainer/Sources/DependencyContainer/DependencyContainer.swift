@@ -146,7 +146,7 @@ final public class DependencyContainer {
 
         let gpsDist = GPSMetricAdaptors.distanceDelta(service: speedAndDistanceService)
         let distSel = PrioritizedMetricSelector(
-            sources: [cscLex.distanceDelta, gpsDist],
+            sources: [ftmsLex.distanceDelta, cscLex.distanceDelta, gpsDist],
             tick: metricTick
         )
         distanceSelector = distSel

@@ -19,9 +19,17 @@ public final class FitnessMachineSensor: NSObject {
 
     private let speedSubject = CurrentValueSubject<Measurement<UnitSpeed>?, Never>(nil)
     private let cadenceSubject = CurrentValueSubject<Measurement<UnitFrequency>?, Never>(nil)
+    private let distanceDeltaMetersSubject = CurrentValueSubject<Double?, Never>(nil)
+    private let distanceAvailableSubject = CurrentValueSubject<Bool, Never>(false)
     private let connectionStateSubject: CurrentValueSubject<ConnectionState, Never>
     private let isEnabledSubject: CurrentValueSubject<Bool, Never>
     private let derivedSubject = PassthroughSubject<IndoorBikeData, Never>()
+
+    /// Monotonic time for FTMS distance deltas (tests may replace).
+    internal var distanceMonotonicNow: () -> CFTimeInterval = { CFAbsoluteTimeGetCurrent() }
+
+    private var lastTotalDistanceMeters: Double?
+    private var lastPacketTimeForSpeedIntegration: CFTimeInterval?
 
     public var derivedUpdates: AnyPublisher<IndoorBikeData, Never> {
         derivedSubject.eraseToAnyPublisher()
@@ -33,6 +41,16 @@ public final class FitnessMachineSensor: NSObject {
 
     public var cadence: AnyPublisher<Measurement<UnitFrequency>, Never> {
         cadenceSubject.compactMap { $0 }.eraseToAnyPublisher()
+    }
+
+    /// Incremental distance in meters from FTMS Total Distance deltas, or integration of instantaneous speed when Total Distance is absent (composition root; matches CSC ``CyclingSpeedAndCadenceSensor/distanceDelta`` shape).
+    public var distanceDelta: AnyPublisher<Double?, Never> {
+        distanceDeltaMetersSubject.eraseToAnyPublisher()
+    }
+
+    /// `true` after this sensor has produced a distance delta since connect (or after reset), until disconnect/reset clears FTMS distance state.
+    public var distanceAvailable: AnyPublisher<Bool, Never> {
+        distanceAvailableSubject.eraseToAnyPublisher()
     }
 
     public var connectionState: AnyPublisher<ConnectionState, Never> {
@@ -114,6 +132,7 @@ public final class FitnessMachineSensor: NSObject {
     public func resetDerivedState() {
         speedSubject.send(nil)
         cadenceSubject.send(nil)
+        resetDistanceState()
     }
 
     public func didFailToConnect() {
@@ -129,6 +148,46 @@ public final class FitnessMachineSensor: NSObject {
         }
         if let v = parsed.cadenceRPM {
             cadenceSubject.send(Measurement(value: v, unit: UnitFrequency.revolutionsPerMinute))
+        }
+        updateDistance(from: parsed)
+    }
+
+    private func resetDistanceState() {
+        lastTotalDistanceMeters = nil
+        lastPacketTimeForSpeedIntegration = nil
+        distanceDeltaMetersSubject.send(nil)
+        distanceAvailableSubject.send(false)
+    }
+
+    private func sendDistanceDeltaMeters(_ meters: Double) {
+        distanceDeltaMetersSubject.send(meters)
+        distanceAvailableSubject.send(true)
+    }
+
+    private func updateDistance(from parsed: IndoorBikeData) {
+        let now = distanceMonotonicNow()
+        if let total = parsed.totalDistanceMeters {
+            lastPacketTimeForSpeedIntegration = nil
+            if let last = lastTotalDistanceMeters {
+                let delta = total - last
+                if delta < 0 {
+                    lastTotalDistanceMeters = total
+                    sendDistanceDeltaMeters(0)
+                } else {
+                    lastTotalDistanceMeters = total
+                    sendDistanceDeltaMeters(delta)
+                }
+            } else {
+                lastTotalDistanceMeters = total
+                sendDistanceDeltaMeters(0)
+            }
+        } else if let speed = parsed.speedMetersPerSecond {
+            if let t0 = lastPacketTimeForSpeedIntegration {
+                let dt = max(0, now - t0)
+                let d = speed * dt
+                sendDistanceDeltaMeters(d)
+            }
+            lastPacketTimeForSpeedIntegration = now
         }
     }
 }

@@ -185,6 +185,57 @@ struct MetricSelectionIntegrationTests {
         _ = sub
     }
 
+    @Test func distance_selectsFtmsOverCscWhenBothConnected() async throws {
+        let cscM = makeCSCManagerForMetrics()
+        let ftmsM = makeFTMSManagerForMetrics()
+        let cscLex = CSCPeripheralLexMetrics(manager: cscM)
+        let ftmsLex = FTMSPeripheralLexMetrics(manager: ftmsM)
+        let gps = PassthroughSubject<Measurement<UnitLength>, Never>()
+        let gpsMetric = AnyMetric<UnitLength>(publisher: gps, isAvailable: Just(false))
+        let tick = PassthroughSubject<Void, Never>()
+        let sel = PrioritizedMetricSelector(
+            sources: [ftmsLex.distanceDelta, cscLex.distanceDelta, gpsMetric],
+            tick: tick.eraseToAnyPublisher(),
+            scheduler: metricTestScheduler()
+        )
+        var values: [Double] = []
+        let sub = sel.publisher.sink { values.append($0.converted(to: .meters).value) }
+
+        let csc = makeCSCSensor(id: UUID(), name: "Wheel", connected: true)
+        cscM._test_registerSensor(csc)
+        await integrationYieldForLexWiring()
+        csc._test_ingestCSCMeasurementData(wheelSample(revolutions: 0, time1024: 0))
+        csc._test_ingestCSCMeasurementData(wheelSample(revolutions: 50, time1024: 1024))
+        await flushMetricDeliveries()
+
+        guard let cscDelta = values.last else {
+            Issue.record("expected CSC distance")
+            return
+        }
+        #expect(cscDelta > 0.01)
+
+        let ft = makeFTMSSensor(id: UUID(), name: "Trainer", connected: true)
+        ftmsM._test_registerSensor(ft)
+        await integrationYieldForLexWiring()
+        ft._test_ingestIndoorBikeData(ftmsTotalDistanceZero)
+        await flushMetricDeliveries()
+        ft._test_ingestIndoorBikeData(ftmsTotalDistanceHundred)
+        await flushMetricDeliveries()
+
+        guard let ftmsDelta = values.last else {
+            Issue.record("expected FTMS distance")
+            return
+        }
+        #expect(abs(ftmsDelta - 100.0) < 0.0001)
+
+        let countAfterFtms = values.count
+        csc._test_ingestCSCMeasurementData(wheelSample(revolutions: 100, time1024: 2048))
+        await flushMetricDeliveries()
+        #expect(values.count == countAfterFtms)
+        #expect(values.last == ftmsDelta)
+        _ = sub
+    }
+
     @Test func heartRate_prioritizedSelector_emitsFromSingleHrSource() async throws {
         let hrM = HeartRateSensorManager(
             persistence: InMemoryHRIntegrationPersistence(),
@@ -291,6 +342,11 @@ struct MetricSelectionIntegrationTests {
     private var ftmsSpeedTenMetersPerSecond: Data { Data([0x00, 0x00, 0x10, 0x0E]) }
 
     private var ftmsCadenceOnlyHundredRpm: Data { Data([0x05, 0x00, 0xC8, 0x00]) }
+
+    /// Indoor Bike Data: More Data + Total Distance, 24-bit total 0 m / 100 m.
+    private var ftmsTotalDistanceZero: Data { Data([0x11, 0x00, 0x00, 0x00, 0x00]) }
+
+    private var ftmsTotalDistanceHundred: Data { Data([0x11, 0x00, 0x64, 0x00, 0x00]) }
 
     private func wheelSample(revolutions: UInt32, time1024: UInt16) -> Data {
         var d = Data([0x01])

@@ -31,6 +31,7 @@ struct IndoorBikeDataParserTests {
         }
         #expect(v.speedMetersPerSecond == nil)
         #expect(v.cadenceRPM == nil)
+        #expect(v.totalDistanceMeters == nil)
     }
 
     @Test func instantaneousSpeed_only() {
@@ -43,6 +44,7 @@ struct IndoorBikeDataParserTests {
         }
         #expect(abs((v.speedMetersPerSecond ?? 0) - 10.0) < 0.001)
         #expect(v.cadenceRPM == nil)
+        #expect(v.totalDistanceMeters == nil)
     }
 
     @Test func instantaneousCadence_only_moreDataNoSpeed() {
@@ -75,6 +77,7 @@ struct IndoorBikeDataParserTests {
         }
         #expect(v.speedMetersPerSecond != nil)
         #expect(abs((v.cadenceRPM ?? 0) - 60.0) < 0.001)
+        #expect(v.totalDistanceMeters == nil)
     }
 
     @Test func truncated_fails() {
@@ -84,6 +87,19 @@ struct IndoorBikeDataParserTests {
             Issue.record("Expected failure")
             return
         }
+    }
+
+    @Test func totalDistance_only_moreDataAndDistanceFlag() {
+        // More Data (bit0) + Total Distance (bit4): 0x0011, then 1000 m LE24
+        let d = Data([0x11, 0x00, 0xE8, 0x03, 0x00])
+        let r = IndoorBikeDataParser.parse(d)
+        guard case .success(let v) = r else {
+            Issue.record("Expected success")
+            return
+        }
+        #expect(v.speedMetersPerSecond == nil)
+        #expect(v.cadenceRPM == nil)
+        #expect(v.totalDistanceMeters == 1000)
     }
 
     @Test func realisticTrainerStyle_payload() {
@@ -101,5 +117,6 @@ struct IndoorBikeDataParserTests {
         }
         #expect(v.speedMetersPerSecond != nil)
         #expect(v.cadenceRPM != nil)
+        #expect(v.totalDistanceMeters == 0)
     }
 }
