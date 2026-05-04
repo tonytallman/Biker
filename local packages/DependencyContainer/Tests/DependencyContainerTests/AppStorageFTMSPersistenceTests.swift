@@ -14,7 +14,7 @@ struct AppStorageFTMSPersistenceTests {
     /// `AppStorage` conforms to `Storage`; `FTMSKnownSensorStore` round-trips JSON via `MockAppStorage`.
     @Test func appStorage_roundTripsKnownSensorsThroughStore() {
         let storage = MockAppStorage()
-        let store = FTMSKnownSensorStore(persistence: storage)
+        let store = FTMSKnownSensorStore(storage: storage)
         _ = store.loadAll()
 
         let id = UUID()
@@ -26,7 +26,7 @@ struct AppStorageFTMSPersistenceTests {
             )
         )
 
-        let reloaded = FTMSKnownSensorStore(persistence: storage).loadAll()
+        let reloaded = FTMSKnownSensorStore(storage: storage).loadAll()
         #expect(reloaded.count == 1)
         #expect(reloaded[0].id == id)
         #expect(reloaded[0].name == "K")
@@ -37,7 +37,7 @@ struct AppStorageFTMSPersistenceTests {
     @Test func corruptPayload_loadsEmptyFromStore() {
         let storage = MockAppStorage()
         storage.set(value: "not-json-data", forKey: "FTMS.knownSensors.v1")
-        let store = FTMSKnownSensorStore(persistence: storage)
+        let store = FTMSKnownSensorStore(storage: storage)
         #expect(store.loadAll().isEmpty)
     }
 }

@@ -11,10 +11,10 @@ import SettingsStrings
 @MainActor
 @Observable
 package final class SensorViewModel {
+    /// BLE peripheral identifier; row identity for known sensors (ADR-0012).
+    package var id: UUID { sensorID }
     package let sensorID: UUID
-    package let type: SensorType
-    /// Row key for lists and navigation when one peripheral advertises multiple services (ADR-0011).
-    package var rowID: SensorRowID { SensorRowID(sensorID: sensorID, type: type) }
+    package private(set) var type: SensorType
     package var title: String
     package var connectionState: SensorConnectionState
     package var isEnabled: Bool
@@ -60,12 +60,12 @@ package final class SensorViewModel {
             .store(in: &cancellables)
     }
 
-    /// When the provider emits a new `any Sensor` for the same id, rebind streams.
+    /// When the provider emits a new `any Sensor` for the same id, rebind streams (type may change after composite dedup — ADR-0012).
     package func replaceSensorIfNeeded(_ newSensor: any Sensor) {
         guard newSensor.id == sensorID else { return }
-        guard newSensor.type == type else { return }
         guard ObjectIdentifier(newSensor as AnyObject) != ObjectIdentifier(sensor as AnyObject) else { return }
         sensor = newSensor
+        type = newSensor.type
         bind()
     }
 

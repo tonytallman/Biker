@@ -168,7 +168,7 @@ struct SensorStackCompositionIntegrationTests {
     @Test func ftms_reconnectSkipsWhenKnownDisabled() {
         let p = InMemoryFTMSIntegrationPersistence()
         let id = UUID()
-        FTMSKnownSensorStore(persistence: p).upsert(FTMSKnownSensorRecord(
+        FTMSKnownSensorStore(storage: p).upsert(FTMSKnownSensorRecord(
             id: id,
             name: "D",
             isEnabled: false

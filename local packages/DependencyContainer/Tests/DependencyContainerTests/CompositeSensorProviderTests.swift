@@ -271,4 +271,65 @@ struct CompositeSensorProviderTests {
         #expect(count == 1)
         _ = sub
     }
+
+    // MARK: - ADR-0012: same peripheral UUID from multiple providers
+
+    @Test
+    func knownDedup_sameUUID_prefersFTMSOverCSC() {
+        let p1 = FakeSensorProvider()
+        let p2 = FakeSensorProvider()
+        let u = UUID()
+        let csc = MockPlainSensor(id: u, name: "Bike", type: .cyclingSpeedAndCadence)
+        let ftms = MockPlainSensor(id: u, name: "Bike", type: .fitnessMachine)
+        let (composite, _) = makeCompositePoweredOn(sensorProviders: [p1, p2])
+        var last: [SensorType] = []
+        let sub = composite.knownSensors.sink { sensors in
+            last = sensors.map(\.type)
+        }
+        p1.setKnown([csc])
+        p2.setKnown([ftms])
+        #expect(last == [.fitnessMachine])
+        _ = sub
+    }
+
+    @Test
+    func knownDedup_sameUUID_prefersCSCOverHR() {
+        let p1 = FakeSensorProvider()
+        let p2 = FakeSensorProvider()
+        let u = UUID()
+        let csc = MockPlainSensor(id: u, name: "X", type: .cyclingSpeedAndCadence)
+        let hr = MockPlainSensor(id: u, name: "X", type: .heartRate)
+        let (composite, _) = makeCompositePoweredOn(sensorProviders: [p1, p2])
+        var last: [SensorType] = []
+        let sub = composite.knownSensors.sink { sensors in
+            last = sensors.map(\.type)
+        }
+        p1.setKnown([csc])
+        p2.setKnown([hr])
+        #expect(last == [.cyclingSpeedAndCadence])
+        _ = sub
+    }
+
+    @Test
+    func discoveredDedup_sameUUID_prefersFTMSAmongThreeProviders() {
+        let p1 = FakeSensorProvider()
+        let p2 = FakeSensorProvider()
+        let p3 = FakeSensorProvider()
+        let u = UUID()
+        let csc = MockPlainSensor(id: u, name: "T", type: .cyclingSpeedAndCadence)
+        let ftms = MockPlainSensor(id: u, name: "T", type: .fitnessMachine)
+        let hr = MockPlainSensor(id: u, name: "T", type: .heartRate)
+        let (composite, _) = makeCompositePoweredOn(sensorProviders: [p1, p2, p3])
+        var last: [any Sensor] = []
+        let sub = composite.discoveredSensors.sink { sensors in
+            last = sensors
+        }
+        p1.setDiscovered([csc])
+        p2.setDiscovered([ftms])
+        p3.setDiscovered([hr])
+        #expect(last.count == 1)
+        #expect(last.first?.type == .fitnessMachine)
+        #expect(last.first?.id == u)
+        _ = sub
+    }
 }

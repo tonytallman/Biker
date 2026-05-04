@@ -10,12 +10,12 @@ import Foundation
 final class FTMSKnownSensorStore {
     private static let storageKey = "FTMS.knownSensors.v1"
 
-    private let persistence: any Storage
+    private let storage: any Storage
     private var recordsByID: [UUID: FTMSKnownSensorRecord] = [:]
     private var lastSavedRecords: [FTMSKnownSensorRecord] = []
 
-    init(persistence: any Storage) {
-        self.persistence = persistence
+    init(storage: any Storage) {
+        self.storage = storage
     }
 
     func loadAll() -> [FTMSKnownSensorRecord] {
@@ -58,7 +58,7 @@ final class FTMSKnownSensorStore {
     }
 
     private func loadRawRecordsFromDisk() -> [FTMSKnownSensorRecord] {
-        guard let data = persistence.get(forKey: Self.storageKey) as? Data,
+        guard let data = storage.get(forKey: Self.storageKey) as? Data,
               !data.isEmpty,
               let records = try? JSONDecoder().decode([FTMSKnownSensorRecord].self, from: data)
         else { return [] }
@@ -67,11 +67,11 @@ final class FTMSKnownSensorStore {
 
     private func writeRecordsToDisk(_ records: [FTMSKnownSensorRecord]) {
         if records.isEmpty {
-            persistence.set(value: nil, forKey: Self.storageKey)
+            storage.set(value: nil, forKey: Self.storageKey)
             return
         }
         if let data = try? JSONEncoder().encode(records) {
-            persistence.set(value: data, forKey: Self.storageKey)
+            storage.set(value: data, forKey: Self.storageKey)
         }
     }
 

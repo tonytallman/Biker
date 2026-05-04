@@ -33,11 +33,11 @@ public final class FitnessMachineSensorManager: NSObject {
     private var backgroundScanActive = false
     private var skipAutoReconnectForPeripheralID: UUID?
 
-    public init(persistence: any Storage) {
+    public init(storage: any Storage) {
         self.ftmsServiceUUID = CBUUID(string: "1826")
         let core = CBCentralManager(delegate: nil, queue: .main)
         self.central = RealFTMSCentral(core: core)
-        self.store = FTMSKnownSensorStore(persistence: persistence)
+        self.store = FTMSKnownSensorStore(storage: storage)
         self.availabilitySubject = CurrentValueSubject(
             FTMSBluetoothAvailabilityReducer.reduce(authorization: type(of: core).authorization, state: core.state)
         )
@@ -58,7 +58,7 @@ public final class FitnessMachineSensorManager: NSObject {
     public init(persistence: any Storage, central: any FTMSCentralManaging) {
         self.ftmsServiceUUID = CBUUID(string: "1826")
         self.central = central
-        self.store = FTMSKnownSensorStore(persistence: persistence)
+        self.store = FTMSKnownSensorStore(storage: persistence)
         self.availabilitySubject = CurrentValueSubject(
             FTMSBluetoothAvailabilityReducer.reduce(authorization: central.authorization, state: central.state)
         )

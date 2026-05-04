@@ -112,8 +112,8 @@ public struct SettingsView: View {
 
                     SensorsSectionView(viewModel: viewModel.sensorsSection)
                 }
-                .navigationDestination(for: SensorRowID.self) { rowID in
-                    SensorDetailsNavigationHost(rowID: rowID, sensorsSection: viewModel.sensorsSection)
+                .navigationDestination(for: UUID.self) { sensorID in
+                    SensorDetailsNavigationHost(sensorID: sensorID, sensorsSection: viewModel.sensorsSection)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -164,10 +164,10 @@ struct SensorsSectionViewModelTests {
 
         let section = makeSectionVM(mockAvailability: mock)
 
-        section.disconnectSensor(rowID: SensorRowID(sensorID: id, type: .cyclingSpeedAndCadence))
+        section.disconnectSensor(id: id)
         #expect(plain.disconnectCallCount == 1)
 
-        section.forgetSensor(rowID: SensorRowID(sensorID: id, type: .cyclingSpeedAndCadence))
+        section.forgetSensor(id: id)
         #expect(plain.forgetCallCount == 1)
     }
 
@@ -217,13 +217,11 @@ struct SensorsSectionViewModelTests {
         )
         mock.provider.setKnownSensors([a, b])
         let section = makeSectionVM(mockAvailability: mock)
-        let rowA = SensorRowID(sensorID: id1, type: .cyclingSpeedAndCadence)
-        let rowB = SensorRowID(sensorID: id2, type: .heartRate)
-        #expect(section.knownSensorIDs == Set([rowA, rowB]))
-        #expect(section.makeSensorDetailsViewModel(for: rowB, dismiss: {}) != nil)
+        #expect(section.knownSensorIDs == Set([id1, id2]))
+        #expect(section.makeSensorDetailsViewModel(for: id2, dismiss: {}) != nil)
         mock.provider.setKnownSensors([a])
-        #expect(section.knownSensorIDs == Set([rowA]))
-        #expect(section.makeSensorDetailsViewModel(for: rowB, dismiss: {}) == nil)
+        #expect(section.knownSensorIDs == Set([id1]))
+        #expect(section.makeSensorDetailsViewModel(for: id2, dismiss: {}) == nil)
     }
 
     @Test("makeSensorDetailsViewModel returns a VM for a known id and nil for unknown")
@@ -241,8 +239,7 @@ struct SensorsSectionViewModelTests {
 
         #expect(section.knownSensors.count == 1)
         var dismissCalls = 0
-        let row = SensorRowID(sensorID: id, type: .cyclingSpeedAndCadence)
-        let details = section.makeSensorDetailsViewModel(for: row) {
+        let details = section.makeSensorDetailsViewModel(for: id) {
             dismissCalls += 1
         }
         #expect(details != nil)
@@ -251,32 +248,24 @@ struct SensorsSectionViewModelTests {
         #expect(details?.name == "Listed")
         #expect(
             section.makeSensorDetailsViewModel(
-                for: SensorRowID(
-                    sensorID: UUID(uuidString: "00000000-0000-0000-0000-00000000DEAD")!,
-                    type: .cyclingSpeedAndCadence
-                ),
+                for: UUID(uuidString: "00000000-0000-0000-0000-00000000DEAD")!,
                 dismiss: {}
             ) == nil
         )
     }
 
-    @Test("same peripheral id with two sensor types yields two known rows; forget is scoped to row (ADR-0011)")
-    func testSamePeripheralTwoProtocolKnownRows() {
+    @Test("one known row per peripheral id from provider; forget targets that sensor (ADR-0012)")
+    func testSingleKnownRowPerPeripheralFromProvider() {
         let mock = MockSensorAvailability(initialBluetooth: .poweredOn)
         let shared = UUID()
-        let csc: any Sensor = MockPlainSensor(id: shared, name: "IC Bike", type: .cyclingSpeedAndCadence)
-        let ftms: any Sensor = MockPlainSensor(id: shared, name: "IC Bike", type: .fitnessMachine)
-        mock.provider.setKnownSensors([csc, ftms])
+        let ftms = MockPlainSensor(id: shared, name: "IC Bike", type: .fitnessMachine)
+        mock.provider.setKnownSensors([ftms])
 
         let section = makeSectionVM(mockAvailability: mock)
-        #expect(section.knownSensors.count == 2)
-        #expect(section.knownSensorIDs == Set([
-            SensorRowID(sensorID: shared, type: .cyclingSpeedAndCadence),
-            SensorRowID(sensorID: shared, type: .fitnessMachine),
-        ]))
+        #expect(section.knownSensors.count == 1)
+        #expect(section.knownSensorIDs == Set([shared]))
 
-        section.forgetSensor(rowID: SensorRowID(sensorID: shared, type: .cyclingSpeedAndCadence))
-        #expect(csc.forgetCallCount == 1)
-        #expect(ftms.forgetCallCount == 0)
+        section.forgetSensor(id: shared)
+        #expect(ftms.forgetCallCount == 1)
     }
 }

@@ -47,7 +47,7 @@ private final class WeakRefBox<T: AnyObject> {
 @MainActor
 struct FitnessMachineSensorManagerTests {
     @Test func mergedSpeed_fansInFromTwoSensors() {
-        let m = FitnessMachineSensorManager(persistence: InMemoryFTMSPersistence())
+        let m = FitnessMachineSensorManager(storage: InMemoryFTMSPersistence())
         let a = makeSensor(id: UUID(), name: "A", connected: true)
         let b = makeSensor(id: UUID(), name: "B", connected: true)
         m._test_registerSensor(a)
@@ -62,7 +62,7 @@ struct FitnessMachineSensorManagerTests {
     }
 
     @Test func hasConnectedSensor_trueWhenAnyKnownIsConnected() {
-        let m = FitnessMachineSensorManager(persistence: InMemoryFTMSPersistence())
+        let m = FitnessMachineSensorManager(storage: InMemoryFTMSPersistence())
         var hasConnected = false
         let c = m.hasConnectedSensor.sink { hasConnected = $0 }
         m._test_registerSensor(makeSensor(id: UUID(), name: "Z", connected: true))
@@ -71,7 +71,7 @@ struct FitnessMachineSensorManagerTests {
     }
 
     @Test func forget_releasesSensor() {
-        let m = FitnessMachineSensorManager(persistence: InMemoryFTMSPersistence())
+        let m = FitnessMachineSensorManager(storage: InMemoryFTMSPersistence())
         let id = UUID()
         var sensor: FitnessMachineSensor! = makeSensor(id: id, name: "X", connected: false)
         m._test_registerSensor(sensor)
@@ -83,7 +83,7 @@ struct FitnessMachineSensorManagerTests {
     }
 
     @Test func knownSensors_sortedByName() {
-        let m = FitnessMachineSensorManager(persistence: InMemoryFTMSPersistence())
+        let m = FitnessMachineSensorManager(storage: InMemoryFTMSPersistence())
         m._test_registerSensor(makeSensor(id: UUID(), name: "B", connected: true))
         m._test_registerSensor(makeSensor(id: UUID(), name: "A", connected: true))
         var names: [String] = []
@@ -101,7 +101,7 @@ struct FitnessMachineSensorManagerTests {
                 isEnabled: false
             ),
         ])
-        let m = FitnessMachineSensorManager(persistence: p)
+        let m = FitnessMachineSensorManager(storage: p)
         let s = m.ftmsSensor(for: id)
         #expect(s != nil)
         #expect(s?.isEnabledValue == false)
@@ -109,7 +109,7 @@ struct FitnessMachineSensorManagerTests {
 
     @Test func forget_removesFromPersistence() {
         let p = InMemoryFTMSPersistence()
-        let m = FitnessMachineSensorManager(persistence: p)
+        let m = FitnessMachineSensorManager(storage: p)
         let id = UUID()
         m._test_registerSensor(makeSensor(id: id, name: "X", connected: true))
         #expect(p.recordsOnDisk.map(\.id).contains(id))

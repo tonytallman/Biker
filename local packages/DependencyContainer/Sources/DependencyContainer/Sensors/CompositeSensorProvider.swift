@@ -2,7 +2,7 @@
 //  CompositeSensorProvider.swift
 //  DependencyContainer
 //
-//  Composition-root `SensorProvider` (ADR-0004): merges per-type participants, SEN-SCAN-7/8; `availability` from system radio (ADR-0009).
+//  Composition-root `SensorProvider` (ADR-0004): merges per-type participants, SEN-SCAN-7/8; per-peripheral type dedup (ADR-0012); `availability` from system radio (ADR-0009).
 
 import Combine
 import Foundation
@@ -21,7 +21,10 @@ final class CompositeSensorProvider: SensorProvider {
     private var currentDiscoveredFlat: [any Sensor] = []
     private var discoveredState: [UUID: (connection: SensorConnectionState, rssi: Int?)] = [:]
     private var discoveredCancellables: [UUID: Set<AnyCancellable>] = [:]
-    private var lastEmittedDiscoveredIds: [UUID] = []
+    /// Winning ``SensorType`` per peripheral after dedup; used to rebind when the chosen stack changes (ADR-0012).
+    private var discoveredBoundType: [UUID: SensorType] = [:]
+    /// Tracks last published discovered list so we re-emit when order changes **or** the winning type per id changes (ADR-0012).
+    private var lastEmittedDiscoveredFingerprint: [String] = []
 
     init(
         sensorProviders: [any SensorProvider],
@@ -79,7 +82,8 @@ final class CompositeSensorProvider: SensorProvider {
         combineLatest(pubs)
             .map { (arrays: [[any Sensor]]) -> [any Sensor] in
                 let merged = arrays.flatMap { $0 }
-                return merged.sorted { a, b in
+                let deduped = deduplicateSensorsByPeripheralPriority(merged)
+                return deduped.sorted { a, b in
                     a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
                 }
             }
@@ -107,17 +111,24 @@ final class CompositeSensorProvider: SensorProvider {
     }
 
     private func onDiscoveredRawMerged(_ merged: [any Sensor]) {
-        let newIds = Set(merged.map(\.id))
+        let deduped = deduplicateSensorsByPeripheralPriority(merged)
+        let newIds = Set(deduped.map(\.id))
         for id in discoveredCancellables.keys where !newIds.contains(id) {
             discoveredCancellables.removeValue(forKey: id)
             discoveredState.removeValue(forKey: id)
+            discoveredBoundType.removeValue(forKey: id)
         }
-        currentDiscoveredFlat = merged
-        for s in merged {
+        for s in deduped {
+            if let bound = discoveredBoundType[s.id], bound != s.type {
+                discoveredCancellables.removeValue(forKey: s.id)
+                discoveredState.removeValue(forKey: s.id)
+            }
+            discoveredBoundType[s.id] = s.type
             if discoveredCancellables[s.id] == nil {
                 bindDiscoveredSensor(s)
             }
         }
+        currentDiscoveredFlat = deduped
         emitDiscoveredIfNeeded()
     }
 
@@ -152,8 +163,8 @@ final class CompositeSensorProvider: SensorProvider {
 
     private func emitDiscoveredIfNeeded() {
         if currentDiscoveredFlat.isEmpty {
-            if !lastEmittedDiscoveredIds.isEmpty {
-                lastEmittedDiscoveredIds = []
+            if !lastEmittedDiscoveredFingerprint.isEmpty {
+                lastEmittedDiscoveredFingerprint = []
                 discoveredSubject.send([])
             }
             return
@@ -165,9 +176,9 @@ final class CompositeSensorProvider: SensorProvider {
                 b, discoveredState[b.id]
             )
         }
-        let ids = sorted.map(\.id)
-        guard ids != lastEmittedDiscoveredIds else { return }
-        lastEmittedDiscoveredIds = ids
+        let fingerprint: [String] = sorted.map { "\($0.id.uuidString):\(String(describing: $0.type))" }
+        guard fingerprint != lastEmittedDiscoveredFingerprint else { return }
+        lastEmittedDiscoveredFingerprint = fingerprint
         discoveredSubject.send(sorted)
     }
 

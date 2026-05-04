@@ -57,7 +57,7 @@ struct FTMSKnownSensorStoreTests {
             ),
         ]
         let p = InMemoryFTMSPersistence(records: records)
-        let s = FTMSKnownSensorStore(persistence: p)
+        let s = FTMSKnownSensorStore(storage: p)
         let v = s.loadAll()
         #expect(v.isEmpty)
         #expect(p.recordsOnDisk.isEmpty)
@@ -65,7 +65,7 @@ struct FTMSKnownSensorStoreTests {
 
     @Test func upsert_coalescesUnchanged() {
         let p = InMemoryFTMSPersistence()
-        let s = FTMSKnownSensorStore(persistence: p)
+        let s = FTMSKnownSensorStore(storage: p)
         _ = s.loadAll()
         let r = FTMSKnownSensorRecord(
             id: UUID(),
@@ -81,7 +81,7 @@ struct FTMSKnownSensorStoreTests {
     @Test func remove_persists() {
         let id = UUID()
         let p = InMemoryFTMSPersistence()
-        let s = FTMSKnownSensorStore(persistence: p)
+        let s = FTMSKnownSensorStore(storage: p)
         _ = s.loadAll()
         s.upsert(FTMSKnownSensorRecord(id: id, name: "X", isEnabled: true))
         #expect(p.recordsOnDisk.map(\.id).contains(id))
@@ -91,7 +91,7 @@ struct FTMSKnownSensorStoreTests {
 
     @Test func load_returnsEmpty_forCorruptData() {
         let p = InMemoryFTMSPersistence(encodedRecordsData: Data("not-json".utf8))
-        let s = FTMSKnownSensorStore(persistence: p)
+        let s = FTMSKnownSensorStore(storage: p)
         let v = s.loadAll()
         #expect(v.isEmpty)
     }

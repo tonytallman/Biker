@@ -34,4 +34,32 @@ public enum SensorType: Sendable, Hashable, CaseIterable {
             "heart.circle"
         }
     }
+
+    /// Lower value = higher precedence when the same peripheral UUID is seen from multiple sensor managers (ADR-0012: FTMS > CSCS > HRS).
+    public var priorityRank: Int {
+        switch self {
+        case .fitnessMachine:
+            0
+        case .cyclingSpeedAndCadence:
+            1
+        case .heartRate:
+            2
+        }
+    }
+}
+
+/// When per-type managers each emit a ``Sensor`` for the same ``Sensor/id``, keep only the best ``SensorType`` per ADR-0012.
+@MainActor
+public func deduplicateSensorsByPeripheralPriority(_ sensors: [any Sensor]) -> [any Sensor] {
+    var bestById: [UUID: any Sensor] = [:]
+    for s in sensors {
+        if let existing = bestById[s.id] {
+            if s.type.priorityRank < existing.type.priorityRank {
+                bestById[s.id] = s
+            }
+        } else {
+            bestById[s.id] = s
+        }
+    }
+    return Array(bestById.values)
 }

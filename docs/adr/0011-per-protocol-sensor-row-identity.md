@@ -1,7 +1,8 @@
 # 11. Per-protocol sensor row identity in Settings
 
-- **Status**: Accepted
+- **Status**: Superseded
 - **Date**: 2026-05-02
+- **Superseded by**: `0012-single-service-per-peripheral-by-priority.md`
 
 ## Context
 

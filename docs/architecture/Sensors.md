@@ -15,6 +15,8 @@ This document describes the **target** architecture for Bluetooth sensors, Setti
 | [0007](../adr/0007-bluetooth-availability-as-first-class-state.md) | `BluetoothAvailability` as first-class state (superseded) |
 | [0009](../adr/0009-sensor-availability-sum-type.md) | `SensorAvailability` sum type and system-wide radio state |
 | [0008](../adr/0008-no-singletons-for-sensor-managers.md) | No singletons for sensor managers |
+| [0011](../adr/0011-per-protocol-sensor-row-identity.md) | Per-protocol sensor row identity in Settings (**superseded**) |
+| [0012](../adr/0012-single-service-per-peripheral-by-priority.md) | Single service exposed per peripheral (FTMS > CSCS > HRS) |
 
 ## Module map
 
@@ -49,7 +51,7 @@ flowchart LR
 | Stateless BLE payload parse (e.g. CSC Measurement bytes) | Stateless types/enums in the package (e.g. `CSCMeasurementParser`) |
 | Delta math (speed, cadence, wheel distance from successive samples) | Per-sensor calculator on the sensor instance (e.g. `CSCDeltaCalculator`) |
 | User-editable wheel diameter (CSCS only) | `CyclingSpeedAndCadenceSensor` + persistence ([ADR-0005](../adr/0005-per-manager-persistence-stores.md), [ADR-0002](../adr/0002-per-sensor-capability-protocols.md)) |
-| Known-sensor list merge, scan ordering | `CompositeSensorProvider` ([ADR-0004](../adr/0004-composite-sensor-provider-at-composition-root.md)) |
+| Known-sensor list merge, scan ordering, **per-peripheral dedup across sensor types** (FTMS > CSCS > HRS) | `CompositeSensorProvider` ([ADR-0004](../adr/0004-composite-sensor-provider-at-composition-root.md), [ADR-0012](../adr/0012-single-service-per-peripheral-by-priority.md)) |
 | Cross-type metric priority (CSC vs FTMS vs GPS, etc.) | `PrioritizedMetricSelector` in app composition ([ADR-0006](../adr/0006-metric-source-selection-at-app-level.md)) |
 | Bluetooth permission vs power vs UI gating | `AnyPublisher<SensorAvailability, Never>` at `SettingsViewModel` + one system `BluetoothAvailability` source at the composition root ([ADR-0009](../adr/0009-sensor-availability-sum-type.md)) |
 | Object lifetime / wiring | `DependencyContainer` ([ADR-0008](../adr/0008-no-singletons-for-sensor-managers.md)) |
