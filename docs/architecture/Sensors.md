@@ -17,6 +17,8 @@ This document describes the **target** architecture for Bluetooth sensors, Setti
 | [0008](../adr/0008-no-singletons-for-sensor-managers.md) | No singletons for sensor managers |
 | [0011](../adr/0011-per-protocol-sensor-row-identity.md) | Per-protocol sensor row identity in Settings (**superseded**) |
 | [0012](../adr/0012-single-service-per-peripheral-by-priority.md) | Single service exposed per peripheral (FTMS > CSCS > HRS) |
+| [0013](../adr/0013-ftms-additional-metrics.md) | FTMS heart rate and elapsed time as metric sources |
+| [0014](../adr/0014-ftms-total-distance-as-distance-source.md) | FTMS Total Distance as authoritative distance source |
 
 ## Module map
 
@@ -52,7 +54,7 @@ flowchart LR
 | Delta math (speed, cadence, wheel distance from successive samples) | Per-sensor calculator on the sensor instance (e.g. `CSCDeltaCalculator`) |
 | User-editable wheel diameter (CSCS only) | `CyclingSpeedAndCadenceSensor` + persistence ([ADR-0005](../adr/0005-per-manager-persistence-stores.md), [ADR-0002](../adr/0002-per-sensor-capability-protocols.md)) |
 | Known-sensor list merge, scan ordering, **per-peripheral dedup across sensor types** (FTMS > CSCS > HRS) | `CompositeSensorProvider` ([ADR-0004](../adr/0004-composite-sensor-provider-at-composition-root.md), [ADR-0012](../adr/0012-single-service-per-peripheral-by-priority.md)) |
-| Cross-type metric priority (CSC vs FTMS vs GPS, etc.) | `PrioritizedMetricSelector` in app composition ([ADR-0006](../adr/0006-metric-source-selection-at-app-level.md)) |
+| Cross-type metric priority (CSC vs FTMS vs GPS, HR vs FTMS HR, elapsed time vs timer, FTMS Total Distance vs distance accumulator, etc.) | `PrioritizedMetricSelector` in app composition ([ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0013](../adr/0013-ftms-additional-metrics.md), [ADR-0014](../adr/0014-ftms-total-distance-as-distance-source.md)) |
 | Bluetooth permission vs power vs UI gating | `AnyPublisher<SensorAvailability, Never>` at `SettingsViewModel` + one system `BluetoothAvailability` source at the composition root ([ADR-0009](../adr/0009-sensor-availability-sum-type.md)) |
 | Object lifetime / wiring | `DependencyContainer` ([ADR-0008](../adr/0008-no-singletons-for-sensor-managers.md)) |
 
@@ -116,7 +118,7 @@ sequenceDiagram
     participant Dash as DashboardVM
     Mgr-->>Adapters: stream updates / availability
     Adapters-->>Sel: per-source AnyMetric
-    Note over Sel: MET-GEN-1, MET-GEN-2, MET-SPD-2, MET-CAD-2, MET-HR-2
+    Note over Sel: MET-GEN-1, MET-GEN-2, MET-SPD-2, MET-CAD-2, MET-HR-2, MET-TIME-2, MET-DIST-2
     Sel-->>Dash: single combined stream per metric
 ```
 
@@ -202,8 +204,14 @@ Each `SEN-*` / `MET-*` id from [Sensors.md](../srs/Sensors.md) maps to the overv
 | MET-CAD-2 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
 | MET-CAD-3 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
 | MET-HR-1 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
-| MET-HR-2 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
+| MET-HR-2 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0013](../adr/0013-ftms-additional-metrics.md) |
 | MET-HR-3 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
+| MET-TIME-1 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0013](../adr/0013-ftms-additional-metrics.md) |
+| MET-TIME-2 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0013](../adr/0013-ftms-additional-metrics.md) |
+| MET-TIME-3 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
+| MET-DIST-1 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0014](../adr/0014-ftms-total-distance-as-distance-source.md) |
+| MET-DIST-2 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md), [ADR-0014](../adr/0014-ftms-total-distance-as-distance-source.md) |
+| MET-DIST-3 | [ADR-0006](../adr/0006-metric-source-selection-at-app-level.md) |
 
 > **Composition:** [ADR-0008](../adr/0008-no-singletons-for-sensor-managers.md) applies to how managers and the composite are constructed; it is left implicit in many rows.
 
@@ -225,7 +233,7 @@ Settings-only UI (e.g. SEN-DET-4) remains in **`SettingsVMTests`**.
 
 | SRS | Where exercised |
 |-----|-----------------|
-| MET-GEN-2, MET-SPD-*, MET-CAD-* | `MetricSelection (integration)` suite |
+| MET-GEN-2, MET-SPD-*, MET-CAD-*, MET-DIST-* | `MetricSelection (integration)` suite |
 | MET-GEN-3 | `metGen3_tickRepeatsCurrentSpeedAtLeastOncePerTickWhileActive` |
 | SEN-TYP-5 | `prefersDualCapableForSpeedAndCadenceOverLexFirstWheelOnly` |
 | SEN-DET-4 | `SensorsSectionViewModelTests` |

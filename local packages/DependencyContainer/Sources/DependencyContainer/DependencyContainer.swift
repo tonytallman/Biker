@@ -45,6 +45,8 @@ final public class DependencyContainer {
     private let cadenceSelector: PrioritizedMetricSelector<UnitFrequency>?
     private let distanceSelector: PrioritizedMetricSelector<UnitLength>?
     private let hrSelector: PrioritizedMetricSelector<UnitFrequency>?
+    private let timeSelector: PrioritizedMetricSelector<UnitDuration>?
+    private let totalDistanceSelector: PrioritizedMetricSelector<UnitLength>?
 
     /// Retain per-family lex adaptors (release) so CSC/FTMS Combine wiring stays active.
     private let cscPeripheralLexMetrics: CSCPeripheralLexMetrics?
@@ -93,6 +95,8 @@ final public class DependencyContainer {
         cadenceSelector = nil
         distanceSelector = nil
         hrSelector = nil
+        timeSelector = nil
+        totalDistanceSelector = nil
         cscPeripheralLexMetrics = nil
         ftmsPeripheralLexMetrics = nil
         heartRatePublisher = fake.cadence
@@ -102,6 +106,11 @@ final public class DependencyContainer {
                 return Measurement(value: bpm, unit: UnitFrequency.beatsPerMinute)
             }
             .eraseToAnyPublisher()
+        timeMetric = AccumulatingMetric<UnitDuration>(
+            source: timeService.timePulse,
+            context: currentRide
+        )
+        timePublisher = timeMetric.publisher
         #else
         let bleManager = settingsDependencies.bluetoothSensorManager
         let ftmsManager = settingsDependencies.fitnessMachineSensorManager
@@ -154,11 +163,32 @@ final public class DependencyContainer {
             source: distSel.publisher,
             context: currentRide
         )
-        distancePublisher = distanceMetric.publisher
+        let localAccumulatedDistance = AnyMetric<UnitLength>(publisher: distanceMetric.publisher)
+        let totalDistSel = PrioritizedMetricSelector(
+            sources: [ftmsLex.totalDistance, localAccumulatedDistance],
+            tick: metricTick
+        )
+        totalDistanceSelector = totalDistSel
+        distancePublisher = totalDistSel.publisher
             .inUnits(settings.distanceUnits)
 
+        timeMetric = AccumulatingMetric<UnitDuration>(
+            source: timeService.timePulse,
+            context: currentRide
+        )
+        let localRideTime = AnyMetric<UnitDuration>(publisher: timeMetric.publisher)
+        let timeSel = PrioritizedMetricSelector(
+            sources: [ftmsLex.elapsedTime, localRideTime],
+            tick: metricTick
+        )
+        timeSelector = timeSel
+        timePublisher = timeSel.publisher
+
         let hrSel = PrioritizedMetricSelector(
-            sources: [HRMetricAdaptors.heartRate(manager: hrManager)],
+            sources: [
+                HRMetricAdaptors.heartRate(manager: hrManager),
+                ftmsLex.heartRate,
+            ],
             tick: metricTick
         )
         hrSelector = hrSel
@@ -179,12 +209,6 @@ final public class DependencyContainer {
         }
         .eraseToAnyPublisher()
         #endif
-
-        timeMetric = AccumulatingMetric<UnitDuration>(
-            source: timeService.timePulse,
-            context: currentRide
-        )
-        timePublisher = timeMetric.publisher
     }
 
     private func getDashboardViewModel() -> DashboardViewModel {

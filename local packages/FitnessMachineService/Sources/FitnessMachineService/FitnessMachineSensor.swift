@@ -20,7 +20,10 @@ public final class FitnessMachineSensor: NSObject {
     private let speedSubject = CurrentValueSubject<Measurement<UnitSpeed>?, Never>(nil)
     private let cadenceSubject = CurrentValueSubject<Measurement<UnitFrequency>?, Never>(nil)
     private let distanceDeltaMetersSubject = CurrentValueSubject<Double?, Never>(nil)
+    private let totalDistanceMetersSubject = CurrentValueSubject<Double?, Never>(nil)
     private let distanceAvailableSubject = CurrentValueSubject<Bool, Never>(false)
+    private let heartRateBPMSubject = CurrentValueSubject<Double?, Never>(nil)
+    private let elapsedTimeSecondsSubject = CurrentValueSubject<Double?, Never>(nil)
     private let connectionStateSubject: CurrentValueSubject<ConnectionState, Never>
     private let isEnabledSubject: CurrentValueSubject<Bool, Never>
     private let derivedSubject = PassthroughSubject<IndoorBikeData, Never>()
@@ -43,9 +46,30 @@ public final class FitnessMachineSensor: NSObject {
         cadenceSubject.compactMap { $0 }.eraseToAnyPublisher()
     }
 
+    /// Heart rate derived from Indoor Bike Data (FTMS HR field), as ``UnitFrequency/hertz`` (BPM × 1/60).
+    public var heartRate: AnyPublisher<Measurement<UnitFrequency>, Never> {
+        heartRateBPMSubject.compactMap { $0 }.map {
+            Measurement(value: $0 / 60.0, unit: UnitFrequency.hertz)
+        }
+        .eraseToAnyPublisher()
+    }
+
+    public var elapsedTime: AnyPublisher<Measurement<UnitDuration>, Never> {
+        elapsedTimeSecondsSubject.compactMap { $0 }
+            .map { Measurement(value: $0, unit: UnitDuration.seconds) }
+            .eraseToAnyPublisher()
+    }
+
     /// Incremental distance in meters from FTMS Total Distance deltas, or integration of instantaneous speed when Total Distance is absent (composition root; matches CSC ``CyclingSpeedAndCadenceSensor/distanceDelta`` shape).
     public var distanceDelta: AnyPublisher<Double?, Never> {
         distanceDeltaMetersSubject.eraseToAnyPublisher()
+    }
+
+    /// Cumulative meters from Indoor Bike Data when the Total Distance flag is present in the parsed packet (authoritative trainer odometer; independent of delta math).
+    public var totalDistance: AnyPublisher<Measurement<UnitLength>, Never> {
+        totalDistanceMetersSubject.compactMap { $0 }
+            .map { Measurement(value: $0, unit: UnitLength.meters) }
+            .eraseToAnyPublisher()
     }
 
     /// `true` after this sensor has produced a distance delta since connect (or after reset), until disconnect/reset clears FTMS distance state.
@@ -132,6 +156,8 @@ public final class FitnessMachineSensor: NSObject {
     public func resetDerivedState() {
         speedSubject.send(nil)
         cadenceSubject.send(nil)
+        heartRateBPMSubject.send(nil)
+        elapsedTimeSecondsSubject.send(nil)
         resetDistanceState()
     }
 
@@ -149,6 +175,12 @@ public final class FitnessMachineSensor: NSObject {
         if let v = parsed.cadenceRPM {
             cadenceSubject.send(Measurement(value: v, unit: UnitFrequency.revolutionsPerMinute))
         }
+        if let bpm = parsed.heartRateBPM {
+            heartRateBPMSubject.send(bpm)
+        }
+        if let secs = parsed.elapsedTimeSeconds {
+            elapsedTimeSecondsSubject.send(secs)
+        }
         updateDistance(from: parsed)
     }
 
@@ -156,6 +188,7 @@ public final class FitnessMachineSensor: NSObject {
         lastTotalDistanceMeters = nil
         lastPacketTimeForSpeedIntegration = nil
         distanceDeltaMetersSubject.send(nil)
+        totalDistanceMetersSubject.send(nil)
         distanceAvailableSubject.send(false)
     }
 
@@ -167,6 +200,7 @@ public final class FitnessMachineSensor: NSObject {
     private func updateDistance(from parsed: IndoorBikeData) {
         let now = distanceMonotonicNow()
         if let total = parsed.totalDistanceMeters {
+            totalDistanceMetersSubject.send(total)
             lastPacketTimeForSpeedIntegration = nil
             if let last = lastTotalDistanceMeters {
                 let delta = total - last
@@ -236,6 +270,18 @@ extension FitnessMachineSensor {
 
     public var cadenceOptional: AnyPublisher<Measurement<UnitFrequency>?, Never> {
         cadenceSubject.eraseToAnyPublisher()
+    }
+
+    public var heartRateBPMOptional: AnyPublisher<Double?, Never> {
+        heartRateBPMSubject.eraseToAnyPublisher()
+    }
+
+    public var elapsedTimeSecondsOptional: AnyPublisher<Double?, Never> {
+        elapsedTimeSecondsSubject.eraseToAnyPublisher()
+    }
+
+    public var totalDistanceMetersOptional: AnyPublisher<Double?, Never> {
+        totalDistanceMetersSubject.eraseToAnyPublisher()
     }
 
     internal var _test_connectionSnapshot: ConnectionState { connectionStateSubject.value }

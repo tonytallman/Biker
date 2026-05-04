@@ -236,6 +236,70 @@ struct MetricSelectionIntegrationTests {
         _ = sub
     }
 
+    @Test func distance_prefersFtmsTotalOverLocalAccumulator_thenRevertsOnDisconnect() async throws {
+        let cscM = makeCSCManagerForMetrics()
+        let ftmsM = makeFTMSManagerForMetrics()
+        let cscLex = CSCPeripheralLexMetrics(manager: cscM)
+        let ftmsLex = FTMSPeripheralLexMetrics(manager: ftmsM)
+        let gpsDistPulse = PassthroughSubject<Measurement<UnitLength>, Never>()
+        let gpsDistMetric = AnyMetric<UnitLength>(publisher: gpsDistPulse, isAvailable: Just(true))
+        let tick = PassthroughSubject<Void, Never>()
+        let distSel = PrioritizedMetricSelector(
+            sources: [ftmsLex.distanceDelta, cscLex.distanceDelta, gpsDistMetric],
+            tick: tick.eraseToAnyPublisher(),
+            scheduler: metricTestScheduler()
+        )
+        let context = MetricContext(activityState: Just(.active).eraseToAnyPublisher())
+        let accum = AccumulatingMetric<UnitLength>(source: distSel.publisher, context: context)
+        let localRideDist = AnyMetric<UnitLength>(publisher: accum.publisher)
+        let totalDistSel = PrioritizedMetricSelector(
+            sources: [ftmsLex.totalDistance, localRideDist],
+            tick: tick.eraseToAnyPublisher(),
+            scheduler: metricTestScheduler()
+        )
+
+        var meters: [Double] = []
+        let sub = totalDistSel.publisher.sink { meters.append($0.converted(to: .meters).value) }
+
+        for _ in 0..<3 {
+            gpsDistPulse.send(Measurement(value: 1.0, unit: .meters))
+        }
+        tick.send(())
+        await flushMetricDeliveries()
+
+        guard let afterGpsOnly = meters.last else {
+            Issue.record("expected GPS-fed accumulator distance")
+            return
+        }
+        #expect(abs(afterGpsOnly - 3.0) < 0.08)
+
+        let ft = makeFTMSSensor(id: UUID(), name: "Trainer", connected: true)
+        ftmsM._test_registerSensor(ft)
+        await integrationYieldForLexWiring()
+
+        ft._test_ingestIndoorBikeData(ftmsTotalDistanceFiveHundred)
+        tick.send(())
+        await flushMetricDeliveries()
+
+        guard let ftmsAbs = meters.last else {
+            Issue.record("expected FTMS total distance")
+            return
+        }
+        #expect(abs(ftmsAbs - 500.0) < 0.08)
+
+        ft.setConnectionState(.disconnected)
+        tick.send(())
+        await flushMetricDeliveries()
+
+        guard let fallback = meters.last else {
+            Issue.record("expected fallback to local accumulator")
+            return
+        }
+        #expect(abs(fallback - afterGpsOnly) < 0.15)
+
+        sub.cancel()
+    }
+
     @Test func heartRate_prioritizedSelector_emitsFromSingleHrSource() async throws {
         let hrM = HeartRateSensorManager(
             persistence: InMemoryHRIntegrationPersistence(),
@@ -255,6 +319,110 @@ struct MetricSelectionIntegrationTests {
         await flushMetricDeliveries()
         #expect(last == 118)
         _ = sub
+    }
+
+    @Test func heartRate_prioritizesHrStrapOverFtmsAndFallsBack() async throws {
+        let hrM = HeartRateSensorManager(
+            persistence: InMemoryHRIntegrationPersistence(),
+            central: IntegrationHRCentral()
+        )
+        let ftmsM = makeFTMSManagerForMetrics()
+        let ftmsLex = FTMSPeripheralLexMetrics(manager: ftmsM)
+        let tick = PassthroughSubject<Void, Never>()
+        let sel = PrioritizedMetricSelector(
+            sources: [
+                HRMetricAdaptors.heartRate(manager: hrM),
+                ftmsLex.heartRate,
+            ],
+            tick: tick.eraseToAnyPublisher(),
+            scheduler: metricTestScheduler()
+        )
+        var last: Double?
+        var avail = false
+        let sub = sel.publisher.sink { last = $0.converted(to: .beatsPerMinute).value }
+        let availSub = sel.isAvailable.sink { avail = $0 }
+
+        let hrs = makeHRSensor(id: UUID(), name: "HRS", connected: true)
+        let ft = makeFTMSSensor(id: UUID(), name: "Trainer", connected: true)
+        hrM._test_registerSensor(hrs)
+        ftmsM._test_registerSensor(ft)
+        await integrationYieldForLexWiring()
+
+        ft._test_ingestIndoorBikeData(Data([0x01, 0x02, 171]))
+        hrs._test_ingestHeartRateMeasurement(Data([0x00, 118]))
+        await flushMetricDeliveries()
+        tick.send(())
+        await flushMetricDeliveries()
+        #expect(last == 118)
+        #expect(avail)
+
+        hrs.setConnectionState(.disconnected)
+        tick.send(())
+        await flushMetricDeliveries()
+        #expect(abs((last ?? 0) - 171.0) < 0.001)
+        #expect(avail)
+
+        ft.setConnectionState(.disconnected)
+        tick.send(())
+        await flushMetricDeliveries()
+        #expect(!avail)
+
+        sub.cancel()
+        availSub.cancel()
+    }
+
+    @Test func elapsedTime_prefersFtmsOverLocalRideAccumulator_thenRevertsOnDisconnect() async throws {
+        let ftmsM = makeFTMSManagerForMetrics()
+        let ftmsLex = FTMSPeripheralLexMetrics(manager: ftmsM)
+        let tick = PassthroughSubject<Void, Never>()
+        let pulse = PassthroughSubject<Measurement<UnitDuration>, Never>()
+        let context = MetricContext(activityState: Just(.active).eraseToAnyPublisher())
+        let accumulator = AccumulatingMetric<UnitDuration>(source: pulse.eraseToAnyPublisher(), context: context)
+        let localRideTime = AnyMetric<UnitDuration>(publisher: accumulator.publisher)
+
+        let sel = PrioritizedMetricSelector(
+            sources: [ftmsLex.elapsedTime, localRideTime],
+            tick: tick.eraseToAnyPublisher(),
+            scheduler: metricTestScheduler()
+        )
+
+        var values: [Double] = []
+        let sub = sel.publisher.sink { values.append($0.converted(to: .seconds).value) }
+
+        let ft = makeFTMSSensor(id: UUID(), name: "Trainer", connected: true)
+        ftmsM._test_registerSensor(ft)
+        await integrationYieldForLexWiring()
+
+        for _ in 0..<3 {
+            pulse.send(Measurement(value: 1.0, unit: .seconds))
+        }
+        tick.send(())
+        await flushMetricDeliveries()
+        guard let afterLocal = values.last else {
+            Issue.record("expected local accumulation")
+            return
+        }
+        #expect(abs(afterLocal - 3.0) < 0.02)
+
+        ft._test_ingestIndoorBikeData(Data([0x01, 0x08, 0xE8, 0x03]))
+        tick.send(())
+        await flushMetricDeliveries()
+        guard let ftmsChosen = values.last else {
+            Issue.record("expected FTMS elapsed seconds")
+            return
+        }
+        #expect(abs(ftmsChosen - 1000.0) < 0.02)
+
+        ft.setConnectionState(.disconnected)
+        tick.send(())
+        await flushMetricDeliveries()
+        guard let afterDisc = values.last else {
+            Issue.record("expected accumulator after disconnect")
+            return
+        }
+        #expect(abs(afterDisc - 3.0) < 0.03)
+
+        sub.cancel()
     }
 
     @Test func metGen3_tickRepeatsCurrentSpeedAtLeastOncePerTickWhileActive() async throws {
@@ -347,6 +515,8 @@ struct MetricSelectionIntegrationTests {
     private var ftmsTotalDistanceZero: Data { Data([0x11, 0x00, 0x00, 0x00, 0x00]) }
 
     private var ftmsTotalDistanceHundred: Data { Data([0x11, 0x00, 0x64, 0x00, 0x00]) }
+
+    private var ftmsTotalDistanceFiveHundred: Data { Data([0x11, 0x00, 0xF4, 0x01, 0x00]) }
 
     private func wheelSample(revolutions: UInt32, time1024: UInt16) -> Data {
         var d = Data([0x01])

@@ -59,4 +59,62 @@ struct FitnessMachineSensorTests {
         #expect(true)
         _ = s
     }
+
+    @Test func ingest_publishesHeartRateInHertz_andElapsedSeconds() {
+        let s = FitnessMachineSensor(
+            id: UUID(),
+            name: "T",
+            initialConnectionState: .connected
+        )
+        var bpmEmitted: Double?
+        var secondsEmitted: Double?
+        let ch = s.heartRate.sink { bpmEmitted = $0.converted(to: .hertz).value * 60.0 }
+        let ct = s.elapsedTime.sink { secondsEmitted = $0.converted(to: .seconds).value }
+        // More Data + HR (0x0201): 120 BPM; separate packet More Data + Elapsed (0x0801): 90 s.
+        s._test_ingestIndoorBikeData(Data([0x01, 0x02, 120]))
+        #expect(abs((bpmEmitted ?? 0) - 120.0) < 0.001)
+
+        bpmEmitted = nil
+        s._test_ingestIndoorBikeData(Data([0x01, 0x08, 0x5A, 0x00]))
+        #expect(abs((secondsEmitted ?? 0) - 90.0) < 0.001)
+
+        var optionalBPM: Double? = -1
+        var optionalSecs: Double? = -1
+        let cob = s.heartRateBPMOptional.sink { optionalBPM = $0 }
+        let cos = s.elapsedTimeSecondsOptional.sink { optionalSecs = $0 }
+        s.resetDerivedState()
+        #expect(optionalBPM == nil)
+        #expect(optionalSecs == nil)
+
+        _ = ch
+        _ = ct
+        _ = cob
+        _ = cos
+    }
+
+    @Test func ingest_totalDistanceEmittedWhenPresent_preserved_whenNextPacketOmitsTotal_resetsWithDerivedState() {
+        let s = FitnessMachineSensor(
+            id: UUID(),
+            name: "T",
+            initialConnectionState: .connected
+        )
+        var absolutes: [Double] = []
+        let cAbs = s.totalDistance.sink { absolutes.append($0.converted(to: .meters).value) }
+        // More Data + Total Distance: 200 m (LE24).
+        s._test_ingestIndoorBikeData(Data([0x11, 0x00, 0xC8, 0x00, 0x00]))
+        #expect(absolutes.count == 1)
+        #expect(abs(absolutes[0] - 200.0) < 0.001)
+
+        // Speed only — aggregate total distance field absent; scalar subject retains 200 until reset.
+        s._test_ingestIndoorBikeData(Data([0x00, 0x00, 0x10, 0x0E]))
+        #expect(absolutes.count == 1)
+
+        var lastOptional: Double? = .nan
+        let cOpt = s.totalDistanceMetersOptional.sink { lastOptional = $0 }
+        s.resetDerivedState()
+        #expect(lastOptional == nil)
+
+        _ = cAbs
+        _ = cOpt
+    }
 }

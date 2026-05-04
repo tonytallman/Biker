@@ -102,6 +102,34 @@ struct IndoorBikeDataParserTests {
         #expect(v.totalDistanceMeters == 1000)
     }
 
+    @Test func heartRatePresent_only() {
+        // More Data (bit0) + Heart Rate (bit9): flags LE 0x0201, then 1 BPM octet.
+        let d = Data([0x01, 0x02, 0x96])
+        let r = IndoorBikeDataParser.parse(d)
+        guard case .success(let v) = r else {
+            Issue.record("Expected success")
+            return
+        }
+        #expect(v.speedMetersPerSecond == nil)
+        #expect(v.cadenceRPM == nil)
+        #expect(v.totalDistanceMeters == nil)
+        #expect(v.heartRateBPM == 150)
+        #expect(v.elapsedTimeSeconds == nil)
+    }
+
+    @Test func elapsedTimePresent_only() {
+        // More Data + Elapsed Time (bit11): flags LE 0x0801, then UInt16 LE seconds.
+        let d = Data([0x01, 0x08, 0x3C, 0x00])
+        let r = IndoorBikeDataParser.parse(d)
+        guard case .success(let v) = r else {
+            Issue.record("Expected success")
+            return
+        }
+        #expect(v.speedMetersPerSecond == nil)
+        #expect(v.heartRateBPM == nil)
+        #expect(v.elapsedTimeSeconds == 60)
+    }
+
     @Test func realisticTrainerStyle_payload() {
         // Speed + cadence + total distance + inst power (common on trainers)
         // bit0 clear (speed), bit2 cadence, bit4 distance, bit6 power → 0x0054

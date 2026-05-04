@@ -22,8 +22,12 @@ public final class FitnessMachineSensorManager: NSObject {
 
     private let mergedSpeedSubject = PassthroughSubject<Measurement<UnitSpeed>, Never>()
     private let mergedCadenceSubject = PassthroughSubject<Measurement<UnitFrequency>, Never>()
+    private let mergedHeartRateSubject = PassthroughSubject<Measurement<UnitFrequency>, Never>()
+    private let mergedElapsedTimeSubject = PassthroughSubject<Measurement<UnitDuration>, Never>()
     private var speedMergeCancellable: AnyCancellable?
     private var cadenceMergeCancellable: AnyCancellable?
+    private var heartRateMergeCancellable: AnyCancellable?
+    private var elapsedTimeMergeCancellable: AnyCancellable?
 
     private var sensorsByID: [UUID: FitnessMachineSensor] = [:]
     private var peripheralsByID: [UUID: any FTMSPeripheral] = [:]
@@ -88,6 +92,14 @@ public final class FitnessMachineSensorManager: NSObject {
 
     public var cadence: AnyPublisher<Measurement<UnitFrequency>, Never> {
         mergedCadenceSubject.eraseToAnyPublisher()
+    }
+
+    public var heartRate: AnyPublisher<Measurement<UnitFrequency>, Never> {
+        mergedHeartRateSubject.eraseToAnyPublisher()
+    }
+
+    public var elapsedTime: AnyPublisher<Measurement<UnitDuration>, Never> {
+        mergedElapsedTimeSubject.eraseToAnyPublisher()
     }
 
     public var hasConnectedSensor: AnyPublisher<Bool, Never> {
@@ -348,10 +360,14 @@ public final class FitnessMachineSensorManager: NSObject {
     private func rebindMetricMerge() {
         speedMergeCancellable?.cancel()
         cadenceMergeCancellable?.cancel()
+        heartRateMergeCancellable?.cancel()
+        elapsedTimeMergeCancellable?.cancel()
         let sensors = Array(sensorsByID.values)
         guard !sensors.isEmpty else {
             speedMergeCancellable = nil
             cadenceMergeCancellable = nil
+            heartRateMergeCancellable = nil
+            elapsedTimeMergeCancellable = nil
             return
         }
         speedMergeCancellable = Publishers.MergeMany(sensors.map { $0.speed })
@@ -361,6 +377,14 @@ public final class FitnessMachineSensorManager: NSObject {
         cadenceMergeCancellable = Publishers.MergeMany(sensors.map { $0.cadence })
             .sink { [weak self] value in
                 self?.mergedCadenceSubject.send(value)
+            }
+        heartRateMergeCancellable = Publishers.MergeMany(sensors.map { $0.heartRate })
+            .sink { [weak self] value in
+                self?.mergedHeartRateSubject.send(value)
+            }
+        elapsedTimeMergeCancellable = Publishers.MergeMany(sensors.map { $0.elapsedTime })
+            .sink { [weak self] value in
+                self?.mergedElapsedTimeSubject.send(value)
             }
     }
 

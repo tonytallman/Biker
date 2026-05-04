@@ -100,7 +100,7 @@
 
 ## General
 
-- `MET-GEN-1` Each metric (Speed, Cadence, Heart Rate) shall have a single active source at any time, chosen from the per-metric priority list for that metric.
+- `MET-GEN-1` Each metric (Speed, Cadence, Heart Rate, Elapsed Time, Distance) shall have a single active source at any time, chosen from the per-metric priority list for that metric.
 - `MET-GEN-2` The active source shall be the highest-priority source that is currently connected. If no source in the priority list is connected, the metric shall be reported as unavailable and no value shall be emitted. If more than one source ties at the highest applicable priority step for that metric, the software shall select exactly one active source using a deterministic rule.
 - `MET-GEN-3` While a source is active, the metric shall be published no less than once per second.
 
@@ -127,4 +127,21 @@
 - `MET-HR-1` The software shall publish a Heart Rate metric to the dashboard.
 - `MET-HR-2` The Heart Rate source priority shall be, from highest to lowest:
   1. Heart Rate Service (Bluetooth service UUID `0x180D`) sensor.
+  2. Fitness Machine Service (FTMS) sensor (instantaneous heart rate from Indoor Bike Data when present).
 - `MET-HR-3` Source selection for Heart Rate shall follow `MET-GEN-1` and `MET-GEN-2`.
+
+## Elapsed Time
+
+- `MET-TIME-1` The software shall publish an elapsed time metric to the dashboard for the active ride session.
+- `MET-TIME-2` The Elapsed Time source priority shall be, from highest to lowest:
+  1. Fitness Machine Service (FTMS) elapsed time field from Indoor Bike Data when present from a connected FTMS peripheral.
+  2. Sum of periodic time increments while the ride context is active (internal ride timer).
+- `MET-TIME-3` Source selection for Elapsed Time shall follow `MET-GEN-1` and `MET-GEN-2`.
+
+## Distance
+
+- `MET-DIST-1` The software shall publish a Distance metric to the dashboard for the active ride session.
+- `MET-DIST-2` The Distance source priority shall be, from highest to lowest:
+  1. Fitness Machine Service (FTMS) Total Distance from Indoor Bike Data when present from a connected FTMS peripheral.
+  2. Internal distance accumulator: sum of selected distance deltas (Fitness Machine indoor-bike deltas and speed-integration fallback, Cycling Speed and Cadence-derived wheel distance deltas, and Core Location distance deltas while the ride context is active).
+- `MET-DIST-3` Source selection for Distance shall follow `MET-GEN-1` and `MET-GEN-2`.

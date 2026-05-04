@@ -18,11 +18,23 @@ public struct IndoorBikeData: Equatable, Sendable {
     public let cadenceRPM: Double?
     /// Total accumulated distance (last 24 bits of the field) in meters when the Total Distance flag is set.
     public let totalDistanceMeters: Double?
+    /// Instantaneous heart rate in beats per minute (one octet when Heart Rate Present is set).
+    public let heartRateBPM: Double?
+    /// Elapsed time since start of workout, in seconds, when Elapsed Time Present is set (`UInt16` LE).
+    public let elapsedTimeSeconds: Double?
 
-    public init(speedMetersPerSecond: Double?, cadenceRPM: Double?, totalDistanceMeters: Double? = nil) {
+    public init(
+        speedMetersPerSecond: Double?,
+        cadenceRPM: Double?,
+        totalDistanceMeters: Double? = nil,
+        heartRateBPM: Double? = nil,
+        elapsedTimeSeconds: Double? = nil
+    ) {
         self.speedMetersPerSecond = speedMetersPerSecond
         self.cadenceRPM = cadenceRPM
         self.totalDistanceMeters = totalDistanceMeters
+        self.heartRateBPM = heartRateBPM
+        self.elapsedTimeSeconds = elapsedTimeSeconds
     }
 }
 
@@ -51,6 +63,8 @@ public enum IndoorBikeDataParser {
         var speed: Double?
         var cadence: Double?
         var totalDistance: Double?
+        var heartRateBPM: Double?
+        var elapsedSeconds: Double?
 
         // Bit 0 "More Data": when set, Instantaneous Speed is omitted.
         if flags & flagMoreData == 0 {
@@ -118,6 +132,7 @@ public enum IndoorBikeDataParser {
         if flags & flagHeartRate != 0 {
             let need = o + 1
             guard data.count >= need else { return .failure(.dataTooShort(minimumBytes: need)) }
+            heartRateBPM = Double(data[data.startIndex + o])
             o += 1
         }
 
@@ -130,6 +145,7 @@ public enum IndoorBikeDataParser {
         if flags & flagElapsedTime != 0 {
             let need = o + 2
             guard data.count >= need else { return .failure(.dataTooShort(minimumBytes: need)) }
+            elapsedSeconds = Double(readUInt16LE(data, offset: o))
             o += 2
         }
 
@@ -142,7 +158,9 @@ public enum IndoorBikeDataParser {
         return .success(IndoorBikeData(
             speedMetersPerSecond: speed,
             cadenceRPM: cadence,
-            totalDistanceMeters: totalDistance
+            totalDistanceMeters: totalDistance,
+            heartRateBPM: heartRateBPM,
+            elapsedTimeSeconds: elapsedSeconds
         ))
     }
 
