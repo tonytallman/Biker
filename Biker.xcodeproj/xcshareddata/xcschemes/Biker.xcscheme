@@ -204,6 +204,18 @@
             testExecutionOrdering = "random">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "SensorsTests"
+               BuildableName = "SensorsTests"
+               BlueprintName = "SensorsTests"
+               ReferencedContainer = "container:local packages/Sensors">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES"
+            testExecutionOrdering = "random">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "SettingsVMTests"
                BuildableName = "SettingsVMTests"
                BlueprintName = "SettingsVMTests"

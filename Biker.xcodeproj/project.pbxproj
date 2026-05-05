@@ -51,6 +51,7 @@
 		EA16D3802E32AF9000A2FFBA /* DesignSystem */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = DesignSystem; sourceTree = "<group>"; };
 		EA16D3832E32AF9300A2FFBD /* FitnessMachineService */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = FitnessMachineService; sourceTree = "<group>"; };
 		EA16D3842E32AF9400A2FFBE /* HeartRateService */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = HeartRateService; sourceTree = "<group>"; };
+		EA16D3852E32AF9500A2FFC0 /* Sensors */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Sensors; sourceTree = "<group>"; };
 		EA16D3812E32AF9100A2FFBB /* Dashboard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Dashboard; sourceTree = "<group>"; };
 		EA16D3822E32AF9200A2FFBC /* MainView */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = MainView; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -163,8 +164,9 @@
 				EA16D3832E32AF9300A2FFBD /* FitnessMachineService */,
 				EA16D3842E32AF9400A2FFBE /* HeartRateService */,
 				EA16D3822E32AF9200A2FFBC /* MainView */,
-				EA16D37F2E32AF8F00A2FFB9 /* Settings */,
 				6919220F2D442A78009C7051 /* MetricsFromCoreLocation */,
+				EA16D3852E32AF9500A2FFC0 /* Sensors */,
+				EA16D37F2E32AF8F00A2FFB9 /* Settings */,
 			);
 			path = "local packages";
 			sourceTree = "<group>";
