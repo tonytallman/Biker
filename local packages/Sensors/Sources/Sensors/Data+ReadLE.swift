@@ -8,8 +8,7 @@
 
 import Foundation
 
-extension Data {
-
+package extension Data {
     func readLE<T: FixedWidthInteger>(at byteOffset: Int, as type: T.Type) -> T? {
         let size = MemoryLayout<T>.size
         guard byteOffset >= 0, byteOffset + size <= count else { return nil }

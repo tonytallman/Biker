@@ -8,9 +8,8 @@
 import Combine
 import Foundation
 
-class CyclingSpeedAndCadenceService {
-
-    protocol Delegate {
+package class CyclingSpeedAndCadenceService {
+    package protocol Delegate {
         func has(serviceId: String) async -> Bool
         func read(characteristicId: String) async -> Data?
         func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
@@ -33,15 +32,15 @@ class CyclingSpeedAndCadenceService {
     private static let measurementCharacteristicId = "2A5B"
     private static let featureCharacteristicId = "2A5C"
 
-    let speed: AnyPublisher<Measurement<UnitSpeed>, Never>?
-    let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
+    package let speed: AnyPublisher<Measurement<UnitSpeed>, Never>?
+    package let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
 
     private var wheelTrack: WheelTrack?
     private var crankTrack: CrankTrack?
 
     private var cancellable: AnyCancellable?
 
-    init?(delegate: Delegate, wheelCircumference: Measurement<UnitLength>?) async {
+    package init?(delegate: Delegate, wheelCircumference: Measurement<UnitLength>?) async {
         guard
             await delegate.has(serviceId: Self.serviceId),
             let featureData = await delegate.read(characteristicId: Self.featureCharacteristicId),

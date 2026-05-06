@@ -8,9 +8,8 @@
 import Combine
 import Foundation
 
-class FitnessMachineService {
-
-    protocol Delegate {
+package class FitnessMachineService {
+    package protocol Delegate {
         func has(serviceId: String) async -> Bool
         func read(characteristicId: String) async -> Data?
         func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
@@ -22,11 +21,11 @@ class FitnessMachineService {
     private static let indoorBikeDataCharacteristicId = "2AD2"
     private static let featureCharacteristicId = "2ACC"
 
-    let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
-    let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
-    let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>?
-    let distance: AnyPublisher<Measurement<UnitLength>, Never>?
-    let elapsedTime: AnyPublisher<Measurement<UnitDuration>, Never>?
+    package let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
+    package let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
+    package let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>?
+    package let distance: AnyPublisher<Measurement<UnitLength>, Never>?
+    package let elapsedTime: AnyPublisher<Measurement<UnitDuration>, Never>?
 
     private let speedSubject: PassthroughSubject<Measurement<UnitSpeed>, Never>
     private let cadenceSubject: PassthroughSubject<Measurement<UnitFrequency>, Never>?
@@ -36,7 +35,7 @@ class FitnessMachineService {
 
     private var cancellable: AnyCancellable?
 
-    init?(delegate: Delegate) async {
+    package init?(delegate: Delegate) async {
         guard
             await delegate.has(serviceId: Self.serviceId),
             let featureData = await delegate.read(characteristicId: Self.featureCharacteristicId),

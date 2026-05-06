@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension UnitFrequency {
+package extension UnitFrequency {
     /// Rotations per minute; base representation matches ``UnitFrequency`` (hertz) via `1/60` Hz per rpm.
     static let revolutionsPerMinute = UnitFrequency(
         symbol: "rpm",

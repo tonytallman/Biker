@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension UnitFrequency {
+package extension UnitFrequency {
     /// One beat per minute; base representation matches ``UnitFrequency`` (hertz) via `1/60` Hz per bpm.
     static let beatsPerMinute = UnitFrequency(
         symbol: "bpm",

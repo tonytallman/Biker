@@ -8,8 +8,8 @@
 import Combine
 import Foundation
 
-class HeartRateService {
-    protocol Delegate {
+package class HeartRateService {
+    package protocol Delegate {
         func has(serviceId: String) async -> Bool
         func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
     }
@@ -19,11 +19,11 @@ class HeartRateService {
     private static let serviceId = "180D"
     private static let heartRateCharacteristicId = "2A37"
 
-    let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>
+    package let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>
     private let heartRateSubject = PassthroughSubject<Measurement<UnitFrequency>, Never>()
     private var cancellable: AnyCancellable?
 
-    init?(delegate: Delegate) async {
+    package init?(delegate: Delegate) async {
         guard await delegate.has(serviceId: Self.serviceId) else {
             return nil
         }
