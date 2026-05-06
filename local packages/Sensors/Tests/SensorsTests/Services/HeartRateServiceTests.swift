@@ -22,46 +22,61 @@ struct HeartRateServiceTests {
         let delegate = MockHeartRateDelegate()
         let service = try #require(await HeartRateService(delegate: delegate))
 
-        var received: Measurement<UnitFrequency>?
-        let cancellable = service.heartRate.sink { received = $0 }
+        let box = ValueBox<Measurement<UnitFrequency>>()
+        let task = Task {
+            for await value in service.heartRate {
+                box.store(value)
+            }
+        }
 
         // Flags 0: UInt8 HR; value 120 at byte 1
-        delegate.heartRateData.send(Data([0x00, 120]))
+        delegate.send(Data([0x00, 120]))
 
-        cancellable.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(received?.value == 120)
-        #expect(received?.unit == .beatsPerMinute)
+        #expect(box.load()?.value == 120)
+        #expect(box.load()?.unit == .beatsPerMinute)
     }
 
     @Test func emitsUInt16LittleEndianHeartRate() async throws {
         let delegate = MockHeartRateDelegate()
         let service = try #require(await HeartRateService(delegate: delegate))
 
-        var received: Measurement<UnitFrequency>?
-        let cancellable = service.heartRate.sink { received = $0 }
+        let box = ValueBox<Measurement<UnitFrequency>>()
+        let task = Task {
+            for await value in service.heartRate {
+                box.store(value)
+            }
+        }
 
         // Flags bit0: UInt16 HR (300 = 0x012C LE)
-        delegate.heartRateData.send(Data([0x01, 0x2C, 0x01]))
+        delegate.send(Data([0x01, 0x2C, 0x01]))
 
-        cancellable.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(received?.value == 300)
-        #expect(received?.unit == .beatsPerMinute)
+        #expect(box.load()?.value == 300)
+        #expect(box.load()?.unit == .beatsPerMinute)
     }
 
     @Test func ignoresEmptyPacket() async throws {
         let delegate = MockHeartRateDelegate()
         let service = try #require(await HeartRateService(delegate: delegate))
 
-        var count = 0
-        let cancellable = service.heartRate.sink { _ in count += 1 }
+        let counter = EmissionCounter()
+        let task = Task {
+            for await _ in service.heartRate {
+                counter.record()
+            }
+        }
 
-        delegate.heartRateData.send(Data())
-        delegate.heartRateData.send(Data([0x00])) // UInt8 mode but missing HR byte
+        delegate.send(Data())
+        delegate.send(Data([0x00])) // UInt8 mode but missing HR byte
 
-        cancellable.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(count == 0)
+        #expect(counter.value == 0)
     }
 }

@@ -5,14 +5,13 @@
 //  Created by Tony Tallman on 5/5/26.
 //
 
-import Combine
 import Foundation
 
-package class FitnessMachineService {
+package final class FitnessMachineService: @unchecked Sendable {
     package protocol Delegate {
         func has(serviceId: String) async -> Bool
         func read(characteristicId: String) async -> Data?
-        func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
+        func subscribeTo(characteristicId: String) -> AsyncStream<Data>
     }
 
     private let delegate: Delegate
@@ -21,19 +20,19 @@ package class FitnessMachineService {
     private static let indoorBikeDataCharacteristicId = "2AD2"
     private static let featureCharacteristicId = "2ACC"
 
-    package let speed: AnyPublisher<Measurement<UnitSpeed>, Never>
-    package let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
-    package let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>?
-    package let distance: AnyPublisher<Measurement<UnitLength>, Never>?
-    package let elapsedTime: AnyPublisher<Measurement<UnitDuration>, Never>?
+    package let speed: AsyncStream<Measurement<UnitSpeed>>
+    package let cadence: AsyncStream<Measurement<UnitFrequency>>?
+    package let heartRate: AsyncStream<Measurement<UnitFrequency>>?
+    package let distance: AsyncStream<Measurement<UnitLength>>?
+    package let elapsedTime: AsyncStream<Measurement<UnitDuration>>?
 
-    private let speedSubject: PassthroughSubject<Measurement<UnitSpeed>, Never>
-    private let cadenceSubject: PassthroughSubject<Measurement<UnitFrequency>, Never>?
-    private let distanceSubject: PassthroughSubject<Measurement<UnitLength>, Never>?
-    private let heartRateSubject: PassthroughSubject<Measurement<UnitFrequency>, Never>?
-    private let elapsedTimeSubject: PassthroughSubject<Measurement<UnitDuration>, Never>?
+    private let speedContinuation: AsyncStream<Measurement<UnitSpeed>>.Continuation
+    private let cadenceContinuation: AsyncStream<Measurement<UnitFrequency>>.Continuation?
+    private let distanceContinuation: AsyncStream<Measurement<UnitLength>>.Continuation?
+    private let heartRateContinuation: AsyncStream<Measurement<UnitFrequency>>.Continuation?
+    private let elapsedTimeContinuation: AsyncStream<Measurement<UnitDuration>>.Continuation?
 
-    private var cancellable: AnyCancellable?
+    private nonisolated(unsafe) var ingestTask: Task<Void, Never>?
 
     package init?(delegate: Delegate) async {
         guard
@@ -46,30 +45,64 @@ package class FitnessMachineService {
 
         self.delegate = delegate
 
-        let speedSub = PassthroughSubject<Measurement<UnitSpeed>, Never>()
-        self.speedSubject = speedSub
-        self.speed = speedSub.eraseToAnyPublisher()
+        let (speedStream, speedCont) = AsyncStream<Measurement<UnitSpeed>>.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        self.speed = speedStream
+        self.speedContinuation = speedCont
 
-        self.cadenceSubject = capabilities.cadence ? PassthroughSubject() : nil
-        self.cadence = cadenceSubject?.eraseToAnyPublisher()
+        if capabilities.cadence {
+            let (s, c) = AsyncStream<Measurement<UnitFrequency>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            self.cadence = s
+            self.cadenceContinuation = c
+        } else {
+            self.cadence = nil
+            self.cadenceContinuation = nil
+        }
 
-        self.distanceSubject = capabilities.distance ? PassthroughSubject() : nil
-        self.distance = distanceSubject?.eraseToAnyPublisher()
+        if capabilities.distance {
+            let (s, c) = AsyncStream<Measurement<UnitLength>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            self.distance = s
+            self.distanceContinuation = c
+        } else {
+            self.distance = nil
+            self.distanceContinuation = nil
+        }
 
-        self.heartRateSubject = capabilities.heartRate ? PassthroughSubject() : nil
-        self.heartRate = heartRateSubject?.eraseToAnyPublisher()
+        if capabilities.heartRate {
+            let (s, c) = AsyncStream<Measurement<UnitFrequency>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            self.heartRate = s
+            self.heartRateContinuation = c
+        } else {
+            self.heartRate = nil
+            self.heartRateContinuation = nil
+        }
 
-        self.elapsedTimeSubject = capabilities.elapsed ? PassthroughSubject() : nil
-        self.elapsedTime = elapsedTimeSubject?.eraseToAnyPublisher()
+        if capabilities.elapsed {
+            let (s, c) = AsyncStream<Measurement<UnitDuration>>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            self.elapsedTime = s
+            self.elapsedTimeContinuation = c
+        } else {
+            self.elapsedTime = nil
+            self.elapsedTimeContinuation = nil
+        }
 
-        subscribeToMeasurement()
+        let dataStream = delegate.subscribeTo(characteristicId: Self.indoorBikeDataCharacteristicId)
+        ingestTask = Task { [weak self] in
+            for await data in dataStream {
+                guard let self else { break }
+                self.handleMeasurement(data)
+            }
+        }
     }
 
-    private func subscribeToMeasurement() {
-        cancellable = delegate.subscribeTo(characteristicId: Self.indoorBikeDataCharacteristicId)
-            .sink { [weak self] data in
-                self?.handleMeasurement(data)
-            }
+    deinit {
+        ingestTask?.cancel()
+        speedContinuation.finish()
+        cadenceContinuation?.finish()
+        distanceContinuation?.finish()
+        heartRateContinuation?.finish()
+        elapsedTimeContinuation?.finish()
     }
 
     private func handleMeasurement(_ data: Data) {
@@ -79,20 +112,20 @@ package class FitnessMachineService {
 
         if let v = parsed.instantaneousSpeed {
             let kmh = Double(v) / 100.0
-            speedSubject.send(Measurement(value: kmh, unit: UnitSpeed.kilometersPerHour))
+            speedContinuation.yield(Measurement(value: kmh, unit: UnitSpeed.kilometersPerHour))
         }
         if let v = parsed.instantaneousCadence {
             let rpm = Double(v) / 2.0
-            cadenceSubject?.send(Measurement(value: rpm, unit: UnitFrequency.revolutionsPerMinute))
+            cadenceContinuation?.yield(Measurement(value: rpm, unit: UnitFrequency.revolutionsPerMinute))
         }
         if let v = parsed.totalDistanceMeters {
-            distanceSubject?.send(Measurement(value: Double(v), unit: UnitLength.meters))
+            distanceContinuation?.yield(Measurement(value: Double(v), unit: UnitLength.meters))
         }
         if let v = parsed.heartRateBpm {
-            heartRateSubject?.send(Measurement(value: Double(v), unit: UnitFrequency.beatsPerMinute))
+            heartRateContinuation?.yield(Measurement(value: Double(v), unit: UnitFrequency.beatsPerMinute))
         }
         if let v = parsed.elapsedTimeSeconds {
-            elapsedTimeSubject?.send(Measurement(value: Double(v), unit: UnitDuration.seconds))
+            elapsedTimeContinuation?.yield(Measurement(value: Double(v), unit: UnitDuration.seconds))
         }
     }
 

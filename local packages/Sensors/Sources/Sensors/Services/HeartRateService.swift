@@ -5,13 +5,12 @@
 //  Created by Tony Tallman on 5/5/26.
 //
 
-import Combine
 import Foundation
 
-package class HeartRateService {
+package final class HeartRateService: @unchecked Sendable {
     package protocol Delegate {
         func has(serviceId: String) async -> Bool
-        func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
+        func subscribeTo(characteristicId: String) -> AsyncStream<Data>
     }
 
     private let delegate: Delegate
@@ -19,9 +18,10 @@ package class HeartRateService {
     private static let serviceId = "180D"
     private static let heartRateCharacteristicId = "2A37"
 
-    package let heartRate: AnyPublisher<Measurement<UnitFrequency>, Never>
-    private let heartRateSubject = PassthroughSubject<Measurement<UnitFrequency>, Never>()
-    private var cancellable: AnyCancellable?
+    private let heartRateContinuation: AsyncStream<Measurement<UnitFrequency>>.Continuation
+    package let heartRate: AsyncStream<Measurement<UnitFrequency>>
+
+    private nonisolated(unsafe) var ingestTask: Task<Void, Never>?
 
     package init?(delegate: Delegate) async {
         guard await delegate.has(serviceId: Self.serviceId) else {
@@ -29,19 +29,26 @@ package class HeartRateService {
         }
 
         self.delegate = delegate
-        self.heartRate = heartRateSubject.eraseToAnyPublisher()
 
-        subscribeToHeartRateData()
+        let (stream, continuation) = AsyncStream<Measurement<UnitFrequency>>.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        self.heartRate = stream
+        self.heartRateContinuation = continuation
+
+        let dataStream = delegate.subscribeTo(characteristicId: Self.heartRateCharacteristicId)
+        ingestTask = Task { [weak self] in
+            for await data in dataStream {
+                guard let self else { break }
+                guard let bpm = Self.parseHeartRate(from: data) else { continue }
+                self.heartRateContinuation.yield(Measurement(value: Double(bpm), unit: UnitFrequency.beatsPerMinute))
+            }
+        }
     }
 
-    private func subscribeToHeartRateData() {
-        cancellable = delegate.subscribeTo(characteristicId: Self.heartRateCharacteristicId)
-            .map { Self.parseHeartRate(from: $0) }
-            .compactMap { $0 }
-            .map { Measurement(value: Double($0), unit: UnitFrequency.beatsPerMinute) }
-            .sink { [weak self] measurement in
-                self?.heartRateSubject.send(measurement)
-            }
+    deinit {
+        ingestTask?.cancel()
+        heartRateContinuation.finish()
     }
 
     /// Parses a Heart Rate Measurement packet (Bluetooth GATT characteristic 0x2A37).

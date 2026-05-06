@@ -5,25 +5,32 @@
 //  Created by Tony Tallman on 5/5/26.
 //
 
-import Combine
 import Foundation
 
-package class CyclingSpeedAndCadenceService {
+package final class CyclingSpeedAndCadenceService: @unchecked Sendable {
     package protocol Delegate {
         func has(serviceId: String) async -> Bool
         func read(characteristicId: String) async -> Data?
-        func subscribeTo(characteristicId: String) -> AnyPublisher<Data, Never>
+        func subscribeTo(characteristicId: String) -> AsyncStream<Data>
     }
 
     private struct WheelTrack {
-        let subject: PassthroughSubject<Measurement<UnitSpeed>, Never>
+        let continuation: AsyncStream<Measurement<UnitSpeed>>.Continuation
         let circumferenceMeters: Double
         var previous: (revs: UInt32, timeTicks: UInt16)?
+
+        func finish() {
+            continuation.finish()
+        }
     }
 
     private struct CrankTrack {
-        let subject: PassthroughSubject<Measurement<UnitFrequency>, Never>
+        let continuation: AsyncStream<Measurement<UnitFrequency>>.Continuation
         var previous: (revs: UInt16, timeTicks: UInt16)?
+
+        func finish() {
+            continuation.finish()
+        }
     }
 
     private let delegate: Delegate
@@ -32,13 +39,13 @@ package class CyclingSpeedAndCadenceService {
     private static let measurementCharacteristicId = "2A5B"
     private static let featureCharacteristicId = "2A5C"
 
-    package let speed: AnyPublisher<Measurement<UnitSpeed>, Never>?
-    package let cadence: AnyPublisher<Measurement<UnitFrequency>, Never>?
+    package let speed: AsyncStream<Measurement<UnitSpeed>>?
+    package let cadence: AsyncStream<Measurement<UnitFrequency>>?
 
     private var wheelTrack: WheelTrack?
     private var crankTrack: CrankTrack?
 
-    private var cancellable: AnyCancellable?
+    private nonisolated(unsafe) var ingestTask: Task<Void, Never>?
 
     package init?(delegate: Delegate, wheelCircumference: Measurement<UnitLength>?) async {
         guard
@@ -54,31 +61,47 @@ package class CyclingSpeedAndCadenceService {
         self.wheelTrack = nil
         self.crankTrack = nil
 
+        var speedStream: AsyncStream<Measurement<UnitSpeed>>?
         if capabilities.wheel {
             guard let wheelCircumference else {
                 return nil
             }
+            let (stream, continuation) = AsyncStream<Measurement<UnitSpeed>>.makeStream(
+                bufferingPolicy: .bufferingNewest(1)
+            )
+            speedStream = stream
             self.wheelTrack = WheelTrack(
-                subject: PassthroughSubject(),
+                continuation: continuation,
                 circumferenceMeters: wheelCircumference.converted(to: .meters).value,
                 previous: nil
             )
         }
+
+        var cadenceStream: AsyncStream<Measurement<UnitFrequency>>?
         if capabilities.crank {
-            self.crankTrack = CrankTrack(subject: PassthroughSubject(), previous: nil)
+            let (stream, continuation) = AsyncStream<Measurement<UnitFrequency>>.makeStream(
+                bufferingPolicy: .bufferingNewest(1)
+            )
+            cadenceStream = stream
+            self.crankTrack = CrankTrack(continuation: continuation, previous: nil)
         }
 
-        self.speed = self.wheelTrack?.subject.eraseToAnyPublisher()
-        self.cadence = self.crankTrack?.subject.eraseToAnyPublisher()
+        self.speed = speedStream
+        self.cadence = cadenceStream
 
-        subscribeToMeasurement()
+        let dataStream = delegate.subscribeTo(characteristicId: Self.measurementCharacteristicId)
+        ingestTask = Task { [weak self] in
+            for await data in dataStream {
+                guard let self else { break }
+                self.handleMeasurement(data)
+            }
+        }
     }
 
-    private func subscribeToMeasurement() {
-        cancellable = delegate.subscribeTo(characteristicId: Self.measurementCharacteristicId)
-            .sink { [weak self] data in
-                self?.handleMeasurement(data)
-            }
+    deinit {
+        ingestTask?.cancel()
+        wheelTrack?.finish()
+        crankTrack?.finish()
     }
 
     private func handleMeasurement(_ data: Data) {
@@ -94,7 +117,7 @@ package class CyclingSpeedAndCadenceService {
                 if deltaTicks != 0 {
                     let deltaRevs = Double(revs &- prev.revs)
                     let seconds = Double(deltaTicks) / 1024.0
-                    track.subject.send(
+                    track.continuation.yield(
                         Measurement(value: deltaRevs * track.circumferenceMeters / seconds, unit: UnitSpeed.metersPerSecond)
                     )
                 }
@@ -111,7 +134,7 @@ package class CyclingSpeedAndCadenceService {
                 if deltaTicks != 0 {
                     let deltaRevs = Double(revs &- prev.revs)
                     let rpm = deltaRevs / (Double(deltaTicks) / 1024.0) * 60.0
-                    track.subject.send(Measurement(value: rpm, unit: UnitFrequency.revolutionsPerMinute))
+                    track.continuation.yield(Measurement(value: rpm, unit: UnitFrequency.revolutionsPerMinute))
                 }
             }
             track.previous = (revs, ticks)

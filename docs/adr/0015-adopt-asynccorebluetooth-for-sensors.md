@@ -7,7 +7,7 @@
 
 ## Context
 
-The `Sensors` package implemented a custom CoreBluetooth bridge (`CBPeripheralDelegate` forwarding, checked continuations, notification ref-counting, Combine bootstrap). Under Swift 6 strict concurrency and CoreBluetooth’s legacy delegate API, this layer accumulated `@unchecked Sendable` adapters and actor hopping.
+The `Sensors` package previously implemented a custom CoreBluetooth bridge (`CBPeripheralDelegate` forwarding, checked continuations, notification ref-counting). Under Swift 6 strict concurrency and CoreBluetooth’s legacy delegate API, that layer accumulated `@unchecked Sendable` adapters and actor hopping.
 
 [`AsyncCoreBluetooth`](https://github.com/meech-ward/AsyncCoreBluetooth) centralizes the same delegate-to-async translation for scanning, connection state, discovery, read/write, and characteristic value streams. Stable semver releases currently depend on branch-pinned transitive packages (CoreBluetooth mock), which SwiftPM rejects when the consumer depends only on tagged versions—so this repo pins **`AsyncCoreBluetooth` at branch `main`** until upstream publishes a semver graph with pinned transitive versions.
 
@@ -17,12 +17,14 @@ The `Sensors` package implemented a custom CoreBluetooth bridge (`CBPeripheralDe
 
 2. Raise **`Sensors`** platform minimums to align with `AsyncCoreBluetooth` / `AsyncObservable`: **macOS 14**, **iOS 17**, **watchOS 10**, **tvOS 17** (replacing prior macOS 12 / tvOS 15 floors).
 
-3. Keep **`SensorError`** and the three service types’ **`Delegate`** protocols and Combine-facing publishers unchanged so existing parsing and delegate tests remain valid.
+3. Expose streaming sensor data as **`AsyncSequence`** / `AsyncStream` / `AsyncThrowingStream` (not Combine): [`Sensor.subscribe(to:in:)`](../../local%20packages/Sensors/Sources/Sensors/Sensor.swift) returns `AsyncThrowingStream<Data, Error>` with continuation multiplexing for multi-consumer notify ref-counting; service types expose `AsyncStream<Measurement<…>>` outputs and `Delegate.subscribeTo` returns `AsyncStream<Data>`. Add **`swift-async-algorithms`** as an SPM dependency (prototype; [`AsyncAlgorithmsAnchor.swift`](../../local%20packages/Sensors/Sources/Sensors/AsyncAlgorithmsAnchor.swift) keeps the product linked for composition experiments).
+
+4. Keep **`SensorError`**, GATT parsers, and the three service **`Delegate`** shapes stable aside from the Combine → `AsyncSequence` substitution so parsing and delegate tests remain valid.
 
 ## Consequences
 
-**Positive**: Less custom concurrency/CoreBluetooth glue in-tree; fewer `@unchecked` bridging types; discovery/read/write/notify paths reuse a maintained async wrapper.
+**Positive**: Less custom concurrency/CoreBluetooth glue in-tree; Combine/`Future`/`PassthroughSubject` bridging removed from `Sensor` and services; discovery/read/write/notify paths reuse a maintained async wrapper; streaming API aligns with Swift concurrency.
 
-**Negative**: **Branch-pinned** dependency on `AsyncCoreBluetooth` (and its transitive branch pins) until upstream publishes releases with pinned transitive deps; **platform minimum bump** for `Sensors` consumers.
+**Negative**: **Branch-pinned** dependency on `AsyncCoreBluetooth` (and its transitive branch pins) until upstream publishes releases with pinned transitive deps; **platform minimum bump** for `Sensors` consumers; **additional** `swift-async-algorithms` dependency; service classes use **`@unchecked Sendable`** where ingest `Task` closures touch instance state.
 
-**Risks / follow-ups**: Monitor upstream releases for semver + pinned transitives and switch from `branch: "main"` to a version range when possible; extend tests around `Sensor` (disconnect, notify refcounting) once BLE fakes are wired.
+**Risks / follow-ups**: Monitor upstream releases for semver + pinned transitives and switch from `branch: "main"` to a version range when possible; `Sensor` integration tests cover disconnect and notify refcounting via `CoreBluetoothMock`; `AsyncCoreBluetooth`’s characteristic `value` stream may replay cached values—[`Sensor`](../../local%20packages/Sensors/Sources/Sensors/Sensor.swift) skips the first replay after re-subscribe where needed; re-evaluate `AsyncAlgorithmsAnchor` / algorithms usage once composition patterns land.

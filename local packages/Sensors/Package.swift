@@ -19,11 +19,15 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/meech-ward/AsyncCoreBluetooth.git", branch: "main"),
         .package(url: "https://github.com/meech-ward/IOS-CoreBluetooth-Mock.git", branch: "main"),
+        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.0.0"),
     ],
     targets: [
         .target(
             name: "Sensors",
-            dependencies: ["AsyncCoreBluetooth"]
+            dependencies: [
+                "AsyncCoreBluetooth",
+                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
+            ]
         ),
         .testTarget(
             name: "SensorsTests",

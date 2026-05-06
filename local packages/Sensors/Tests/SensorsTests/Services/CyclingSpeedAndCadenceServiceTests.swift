@@ -35,22 +35,28 @@ struct CyclingSpeedAndCadenceServiceTests {
         let service = try #require(await CyclingSpeedAndCadenceService(delegate: delegate, wheelCircumference: circumference))
         #expect(service.cadence == nil)
 
-        var speed: Measurement<UnitSpeed>?
-        let cancellable = service.speed?.sink { speed = $0 }
+        let speedStream = try #require(service.speed)
+        let box = ValueBox<Measurement<UnitSpeed>>()
+        let task = Task {
+            for await value in speedStream {
+                box.store(value)
+            }
+        }
 
         // Flags wheel; revs and ticks UInt32/UInt16 LE
-        delegate.measurementData.send(
+        delegate.sendMeasurement(
             Data([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
         )
-        delegate.measurementData.send(
+        delegate.sendMeasurement(
             Data([0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x04])
         )
         // delta revs 1, delta ticks 1024 -> 1 s -> 2 m/s
 
-        cancellable?.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(speed != nil)
-        #expect(speed?.converted(to: .metersPerSecond).value == 2.0)
+        #expect(box.load() != nil)
+        #expect(box.load()?.converted(to: .metersPerSecond).value == 2.0)
     }
 
     @Test func crankCadenceFromTwoSamples() async throws {
@@ -60,18 +66,24 @@ struct CyclingSpeedAndCadenceServiceTests {
         let service = try #require(await CyclingSpeedAndCadenceService(delegate: delegate, wheelCircumference: nil))
         #expect(service.speed == nil)
 
-        var cadence: Measurement<UnitFrequency>?
-        let cancellable = service.cadence?.sink { cadence = $0 }
+        let cadenceStream = try #require(service.cadence)
+        let box = ValueBox<Measurement<UnitFrequency>>()
+        let task = Task {
+            for await value in cadenceStream {
+                box.store(value)
+            }
+        }
 
         // Flags crank; revs UInt16, ticks UInt16
-        delegate.measurementData.send(Data([0x02, 0x00, 0x00, 0x00, 0x00]))
-        delegate.measurementData.send(Data([0x02, 0x0A, 0x00, 0x00, 0x28]))
+        delegate.sendMeasurement(Data([0x02, 0x00, 0x00, 0x00, 0x00]))
+        delegate.sendMeasurement(Data([0x02, 0x0A, 0x00, 0x00, 0x28]))
         // delta revs 10, delta ticks 0x2800 = 10240 -> 10 s -> 60 rpm
 
-        cancellable?.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(cadence?.unit == .revolutionsPerMinute)
-        #expect(cadence?.value == 60.0)
+        #expect(box.load()?.unit == .revolutionsPerMinute)
+        #expect(box.load()?.value == 60.0)
     }
 
     @Test func skipsEmissionWhenDeltaTicksZero() async throws {
@@ -79,13 +91,19 @@ struct CyclingSpeedAndCadenceServiceTests {
         delegate.featureCharacteristicValue = Data([0x02, 0x00])
         let service = try #require(await CyclingSpeedAndCadenceService(delegate: delegate, wheelCircumference: nil))
 
-        var count = 0
-        let cancellable = service.cadence?.sink { _ in count += 1 }
+        let cadenceStream = try #require(service.cadence)
+        let counter = EmissionCounter()
+        let task = Task {
+            for await _ in cadenceStream {
+                counter.record()
+            }
+        }
 
-        delegate.measurementData.send(Data([0x02, 0x00, 0x00, 0x00, 0x00]))
-        delegate.measurementData.send(Data([0x02, 0x05, 0x00, 0x00, 0x00])) // same time ticks
+        delegate.sendMeasurement(Data([0x02, 0x00, 0x00, 0x00, 0x00]))
+        delegate.sendMeasurement(Data([0x02, 0x05, 0x00, 0x00, 0x00])) // same time ticks
 
-        cancellable?.cancel()
-        #expect(count == 0)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
+        #expect(counter.value == 0)
     }
 }

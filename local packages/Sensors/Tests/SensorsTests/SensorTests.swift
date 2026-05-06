@@ -4,7 +4,6 @@
 //
 
 import AsyncCoreBluetooth
-import Combine
 import CoreBluetooth
 @preconcurrency import CoreBluetoothMock
 import Foundation
@@ -30,6 +29,29 @@ private final class StreamFirstValueBox: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return storage
+    }
+}
+
+private final class DataBucket: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [Data] = []
+
+    func append(_ value: Data) {
+        lock.lock()
+        storage.append(value)
+        lock.unlock()
+    }
+
+    var last: Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage.last
+    }
+
+    var isEmpty: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage.isEmpty
     }
 }
 
@@ -253,42 +275,58 @@ struct SensorTests {
 
     @Test func subscribe_deliversSimulatedNotifications() async throws {
         let h = try await makeHarness()
-        var received: [Data] = []
-        let cancellable = h.sensor.subscribe(
+        let stream = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(
-            receiveCompletion: { _ in },
-            receiveValue: { received.append($0) }
-        )
-        defer { cancellable.cancel() }
+        let bucket = DataBucket()
+        let task = Task {
+            do {
+                for try await data in stream {
+                    bucket.append(data)
+                }
+            } catch {
+                Issue.record("unexpected subscribe stream error: \(error)")
+            }
+        }
+        defer { task.cancel() }
 
         try await waitForMeasurementNotifyEnabled(h: h)
 
         let payload = Data([0x06, 70])
         h.spec.simulateValueUpdate(payload, for: MockBLEPeripheral.measurementCharacteristic)
         try await sleepShort()
-        #expect(received.last == payload)
+        #expect(bucket.last == payload)
     }
 
     @Test func subscribe_refCount_keepsNotifyUntilLastCancel() async throws {
         let h = try await makeHarness()
 
-        var firstBucket: [Data] = []
-        var secondBucket: [Data] = []
-
-        let c1 = h.sensor.subscribe(
+        let stream1 = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(receiveCompletion: { _ in }, receiveValue: { firstBucket.append($0) })
+        let firstBucket = DataBucket()
+        let task1 = Task {
+            do {
+                for try await data in stream1 {
+                    firstBucket.append(data)
+                }
+            } catch {}
+        }
 
-        let c2 = h.sensor.subscribe(
+        let stream2 = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(receiveCompletion: { _ in }, receiveValue: { secondBucket.append($0) })
+        let secondBucket = DataBucket()
+        let task2 = Task {
+            do {
+                for try await data in stream2 {
+                    secondBucket.append(data)
+                }
+            } catch {}
+        }
 
         try await sleepShort()
 
@@ -304,13 +342,13 @@ struct SensorTests {
         let meas = MockBLEPeripheral.measurementUUID
         let disableStepsBefore = h.delegate.notifyTransitions.filter { $0.uuid == meas && !$0.enabled }.count
 
-        c1.cancel()
+        task1.cancel()
         try await sleepShort()
 
         let disableStepsMiddle = h.delegate.notifyTransitions.filter { $0.uuid == meas && !$0.enabled }.count
         #expect(disableStepsMiddle == disableStepsBefore)
 
-        c2.cancel()
+        task2.cancel()
         try await sleepShort()
 
         let disableStepsAfter = h.delegate.notifyTransitions.filter { $0.uuid == meas && !$0.enabled }.count
@@ -320,12 +358,18 @@ struct SensorTests {
     @Test func subscribe_afterTeardownDoesNotReplayStaleCachedValue() async throws {
         let h = try await makeHarness()
 
-        var roundOne: [Data] = []
-        let c1 = h.sensor.subscribe(
+        let stream1 = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(receiveCompletion: { _ in }, receiveValue: { roundOne.append($0) })
+        let roundOne = DataBucket()
+        let task1 = Task {
+            do {
+                for try await data in stream1 {
+                    roundOne.append(data)
+                }
+            } catch {}
+        }
 
         try await waitForMeasurementNotifyEnabled(h: h)
 
@@ -334,16 +378,22 @@ struct SensorTests {
         try await sleepShort()
         #expect(roundOne.last == payloadA)
 
-        c1.cancel()
+        task1.cancel()
         try await sleepShort()
 
-        var roundTwo: [Data] = []
         let priorTransitionCount = h.delegate.notifyTransitions.count
-        let c2 = h.sensor.subscribe(
+        let stream2 = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(receiveCompletion: { _ in }, receiveValue: { roundTwo.append($0) })
+        let roundTwo = DataBucket()
+        let task2 = Task {
+            do {
+                for try await data in stream2 {
+                    roundTwo.append(data)
+                }
+            } catch {}
+        }
 
         try await waitForMeasurementNotifyEnabled(h: h, minimumPriorTransitions: priorTransitionCount)
 
@@ -355,7 +405,7 @@ struct SensorTests {
         try await sleepShort()
         #expect(roundTwo.last == payloadB)
 
-        c2.cancel()
+        task2.cancel()
     }
 
     /// Runs last in this suite so earlier notify/ref-count tests don’t inherit disconnect/mock fallout.
@@ -364,19 +414,18 @@ struct SensorTests {
 
         let capture = CompletionHolder()
 
-        let cancellable = h.sensor.subscribe(
+        let stream = try await h.sensor.subscribe(
             to: MockBLEPeripheral.measurementUUID,
             in: MockBLEPeripheral.serviceUUID
         )
-        .sink(
-            receiveCompletion: { completion in
-                if case let .failure(error) = completion {
-                    capture.error = error
-                }
-            },
-            receiveValue: { _ in }
-        )
-        defer { cancellable.cancel() }
+        let task = Task {
+            do {
+                for try await _ in stream {}
+            } catch {
+                capture.error = error
+            }
+        }
+        defer { task.cancel() }
 
         try await sleepShort()
 

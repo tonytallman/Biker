@@ -6,40 +6,19 @@
 //
 
 import AsyncCoreBluetooth
-@preconcurrency import Combine
 import CoreBluetooth
 import Foundation
 
-// MARK: - Combine bootstrap
+// MARK: - Keys
 
 private struct NotificationKey: Hashable {
     let service: CBUUID
     let characteristic: CBUUID
 }
 
-/// Bundles notification pipeline pieces created on the actor for Combine ``subscribe``.
-private struct SubscribeBootstrap: @unchecked Sendable {
-    let key: NotificationKey
-    let subject: PassthroughSubject<Data, Error>
-}
-
-/// Wraps Combine's `Future.Promise` until Apple marks it `@Sendable` (Swift 6 `sending` workaround).
-private final class UncheckedFutureFulfill<Output, Failure: Error>: @unchecked Sendable {
-
-    private let body: (Result<Output, Failure>) -> Void
-
-    init(_ body: @escaping (Result<Output, Failure>) -> Void) {
-        self.body = body
-    }
-
-    func invoke(_ result: Result<Output, Failure>) {
-        body(result)
-    }
-}
-
 // MARK: - Sensor actor
 
-/// Wraps ``AsyncCoreBluetooth/Peripheral`` and exposes async read/write plus Combine notifications.
+/// Wraps ``AsyncCoreBluetooth/Peripheral`` and exposes async read/write plus notification ``AsyncThrowingStream``s.
 ///
 /// State is serialized through actor isolation; BLE delegate bridging lives in `AsyncCoreBluetooth`.
 ///
@@ -52,7 +31,7 @@ package actor Sensor {
     /// Keyed by service UUID, then characteristic UUID.
     private var characteristics: [CBUUID: [CBUUID: Characteristic]] = [:]
 
-    private var notificationSubjects: [NotificationKey: PassthroughSubject<Data, Error>] = [:]
+    private var notificationContinuations: [NotificationKey: [UUID: AsyncThrowingStream<Data, Error>.Continuation]] = [:]
     private var notificationRefCount: [NotificationKey: Int] = [:]
     private var notificationListenTasks: [NotificationKey: Task<Void, Never>] = [:]
 
@@ -124,12 +103,14 @@ package actor Sensor {
         }
         notificationListenTasks.removeAll()
 
-        let subjects = notificationSubjects
-        notificationSubjects.removeAll()
+        let continuations = notificationContinuations
+        notificationContinuations.removeAll()
         notificationRefCount.removeAll()
 
-        for (_, subject) in subjects {
-            subject.send(completion: .failure(sensorError))
+        for (_, perKey) in continuations {
+            for (_, continuation) in perKey {
+                continuation.finish(throwing: sensorError)
+            }
         }
     }
 
@@ -183,59 +164,48 @@ package actor Sensor {
 
     // MARK: Subscribe
 
-    package nonisolated func subscribe(
+    package func subscribe(
         to uuid: CBUUID,
         in service: CBUUID
-    ) -> AnyPublisher<Data, Error> {
-        let sensor = self
-        return Combine.Deferred {
-            Future<SubscribeBootstrap, Error> { promise in
-                let fulfill = UncheckedFutureFulfill(promise)
-                Task {
-                    do {
-                        let bootstrap = try await sensor.makeSubscribeBootstrap(for: uuid, in: service)
-                        fulfill.invoke(.success(bootstrap))
-                    } catch {
-                        fulfill.invoke(.failure(error))
-                    }
-                }
-            }
-        }
-        .map { bootstrap in
-            bootstrap.subject
-                .handleEvents(
-                    receiveSubscription: { _ in
-                        Task {
-                            await sensor.incrementNotification(for: bootstrap.key)
-                        }
-                    },
-                    receiveCancel: {
-                        Task { await sensor.decrementNotification(for: bootstrap.key) }
-                    }
-                )
-                .eraseToAnyPublisher()
-        }
-        .switchToLatest()
-        .eraseToAnyPublisher()
-    }
-
-    fileprivate func makeSubscribeBootstrap(for uuid: CBUUID, in service: CBUUID) async throws -> SubscribeBootstrap {
+    ) async throws -> AsyncThrowingStream<Data, Error> {
         _ = try requireCharacteristic(uuid, in: service)
         let key = NotificationKey(service: service, characteristic: uuid)
-        let subject = prepareNotificationSubject(for: key)
-        return SubscribeBootstrap(key: key, subject: subject)
-    }
+        let subscriberID = UUID()
 
-    private func prepareNotificationSubject(for key: NotificationKey) -> PassthroughSubject<Data, Error> {
-        if let existing = notificationSubjects[key] {
-            return existing
+        let (stream, continuation) = AsyncThrowingStream<Data, Error>.makeStream(
+            bufferingPolicy: .bufferingNewest(64)
+        )
+
+        let sensor = self
+        continuation.onTermination = { @Sendable _ in
+            Task {
+                await sensor.unregisterSubscriber(id: subscriberID, key: key)
+            }
         }
-        let created = PassthroughSubject<Data, Error>()
-        notificationSubjects[key] = created
-        return created
+
+        notificationContinuations[key, default: [:]][subscriberID] = continuation
+        do {
+            try await incrementNotification(for: key)
+        } catch {
+            notificationContinuations[key]?.removeValue(forKey: subscriberID)
+            if notificationContinuations[key]?.isEmpty == true {
+                notificationContinuations.removeValue(forKey: key)
+            }
+            throw error
+        }
+
+        return stream
     }
 
-    fileprivate func incrementNotification(for key: NotificationKey) async {
+    private func unregisterSubscriber(id: UUID, key: NotificationKey) async {
+        notificationContinuations[key]?.removeValue(forKey: id)
+        if notificationContinuations[key]?.isEmpty == true {
+            notificationContinuations.removeValue(forKey: key)
+        }
+        await decrementNotification(for: key)
+    }
+
+    private func incrementNotification(for key: NotificationKey) async throws {
         guard let characteristic = characteristics[key.service]?[key.characteristic] else { return }
 
         let next = (notificationRefCount[key] ?? 0) + 1
@@ -249,9 +219,13 @@ package actor Sensor {
             }
         } catch {
             notificationRefCount[key] = nil
-            notificationSubjects[key]?.send(completion: .failure(error))
-            notificationSubjects[key] = nil
-            return
+            let boxed = notificationContinuations[key] ?? [:]
+            notificationContinuations.removeValue(forKey: key)
+            let mapped = Self.mapError(error)
+            for (_, continuation) in boxed {
+                continuation.finish(throwing: mapped)
+            }
+            throw mapped
         }
 
         notificationListenTasks[key] = Task {
@@ -259,14 +233,14 @@ package actor Sensor {
         }
     }
 
-    fileprivate func decrementNotification(for key: NotificationKey) async {
+    private func decrementNotification(for key: NotificationKey) async {
         guard let current = notificationRefCount[key], current > 0 else { return }
         let next = current - 1
         if next == 0 {
             notificationRefCount[key] = nil
             notificationListenTasks[key]?.cancel()
             notificationListenTasks[key] = nil
-            notificationSubjects[key] = nil
+            notificationContinuations.removeValue(forKey: key)
 
             if let characteristic = characteristics[key.service]?[key.characteristic] {
                 _ = try? await peripheral.setNotifyValue(false, for: characteristic)
@@ -295,7 +269,10 @@ package actor Sensor {
                 skipFirstReplayFromCache = false
                 continue
             }
-            notificationSubjects[key]?.send(data)
+            let subscribers = notificationContinuations[key] ?? [:]
+            for (_, continuation) in subscribers {
+                continuation.yield(data)
+            }
         }
     }
 

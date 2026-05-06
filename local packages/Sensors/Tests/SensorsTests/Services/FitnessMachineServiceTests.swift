@@ -24,7 +24,6 @@ struct FitnessMachineServiceTests {
 
     @Test func optionalStreamsNilWhenCapabilitiesDisabled() async throws {
         let delegate = MockFitnessMachineDelegate()
-        // Only bit 0 set in feature word would be... actually 0x00000001 might still parse.
         // Use word with no cadence/distance/hr/elapsed bits.
         delegate.featureCharacteristicValue = Data([0x00, 0x00, 0x00, 0x00])
         let service = try #require(await FitnessMachineService(delegate: delegate))
@@ -39,16 +38,21 @@ struct FitnessMachineServiceTests {
         delegate.featureCharacteristicValue = Data([0x00, 0x00, 0x00, 0x00])
         let service = try #require(await FitnessMachineService(delegate: delegate))
 
-        var speed: Measurement<UnitSpeed>?
-        let cancellable = service.speed.sink { speed = $0 }
+        let box = ValueBox<Measurement<UnitSpeed>>()
+        let task = Task {
+            for await value in service.speed {
+                box.store(value)
+            }
+        }
 
         // Flags 0 -> speed present; 2500 raw -> 25 km/h
-        delegate.indoorBikeData.send(Data([0x00, 0x00, 0xC4, 0x09]))
+        delegate.sendIndoorBikeData(Data([0x00, 0x00, 0xC4, 0x09]))
 
-        cancellable.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(speed?.value == 25.0)
-        #expect(speed?.unit == .kilometersPerHour)
+        #expect(box.load()?.value == 25.0)
+        #expect(box.load()?.unit == .kilometersPerHour)
     }
 
     @Test func indoorBikeCadenceWhenCapabilityEnabled() async throws {
@@ -56,16 +60,22 @@ struct FitnessMachineServiceTests {
         delegate.featureCharacteristicValue = Data([0x02, 0x00, 0x00, 0x00]) // cadence bit
         let service = try #require(await FitnessMachineService(delegate: delegate))
 
-        var cadence: Measurement<UnitFrequency>?
-        let cancellable = try #require(service.cadence).sink { cadence = $0 }
+        let cadenceStream = try #require(service.cadence)
+        let box = ValueBox<Measurement<UnitFrequency>>()
+        let task = Task {
+            for await value in cadenceStream {
+                box.store(value)
+            }
+        }
 
         // More data (omit inst speed) + cadence: flags 0x0005 LE [0x05, 0x00]; cadence raw 100 -> 50 rpm
-        delegate.indoorBikeData.send(Data([0x05, 0x00, 0x64, 0x00]))
+        delegate.sendIndoorBikeData(Data([0x05, 0x00, 0x64, 0x00]))
 
-        cancellable.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        task.cancel()
 
-        #expect(cadence?.value == 50.0)
-        #expect(cadence?.unit == .revolutionsPerMinute)
+        #expect(box.load()?.value == 50.0)
+        #expect(box.load()?.unit == .revolutionsPerMinute)
     }
 
     @Test func indoorBikeDistanceHeartRateElapsed() async throws {
@@ -76,13 +86,29 @@ struct FitnessMachineServiceTests {
 
         let service = try #require(await FitnessMachineService(delegate: delegate))
 
-        var distance: Measurement<UnitLength>?
-        var heart: Measurement<UnitFrequency>?
-        var elapsed: Measurement<UnitDuration>?
+        let distanceBox = ValueBox<Measurement<UnitLength>>()
+        let heartBox = ValueBox<Measurement<UnitFrequency>>()
+        let elapsedBox = ValueBox<Measurement<UnitDuration>>()
 
-        let dC = try #require(service.distance).sink { distance = $0 }
-        let hC = try #require(service.heartRate).sink { heart = $0 }
-        let eC = try #require(service.elapsedTime).sink { elapsed = $0 }
+        let distanceStream = try #require(service.distance)
+        let heartStream = try #require(service.heartRate)
+        let elapsedStream = try #require(service.elapsedTime)
+
+        let dTask = Task {
+            for await value in distanceStream {
+                distanceBox.store(value)
+            }
+        }
+        let hTask = Task {
+            for await value in heartStream {
+                heartBox.store(value)
+            }
+        }
+        let eTask = Task {
+            for await value in elapsedStream {
+                elapsedBox.store(value)
+            }
+        }
 
         // Build flags: more data (0x01) | distance (0x10) | HR (0x200) | elapsed (0x800) = 0xA11
         let indoorFlags: UInt16 = 0x0001 | 0x0010 | 0x0200 | 0x0800
@@ -95,17 +121,18 @@ struct FitnessMachineServiceTests {
         // elapsed 60 s
         payload.append(contentsOf: withUnsafeBytes(of: UInt16(60).littleEndian, Array.init))
 
-        delegate.indoorBikeData.send(payload)
+        delegate.sendIndoorBikeData(payload)
 
-        dC.cancel()
-        hC.cancel()
-        eC.cancel()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        dTask.cancel()
+        hTask.cancel()
+        eTask.cancel()
 
-        #expect(distance?.value == 250)
-        #expect(distance?.unit == .meters)
-        #expect(heart?.value == 140)
-        #expect(heart?.unit == .beatsPerMinute)
-        #expect(elapsed?.value == 60)
-        #expect(elapsed?.unit == .seconds)
+        #expect(distanceBox.load()?.value == 250)
+        #expect(distanceBox.load()?.unit == .meters)
+        #expect(heartBox.load()?.value == 140)
+        #expect(heartBox.load()?.unit == .beatsPerMinute)
+        #expect(elapsedBox.load()?.value == 60)
+        #expect(elapsedBox.load()?.unit == .seconds)
     }
 }

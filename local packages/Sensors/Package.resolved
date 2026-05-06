@@ -1,5 +1,5 @@
 {
-  "originHash" : "2f427b966a2dd24a97e356316ffc4db7589f561e68c2a356ae9386f1e0012cf3",
+  "originHash" : "5038a956df23f9190027ebe8a55c8c028df24ec2651f1308576c7fa271673103",
   "pins" : [
     {
       "identity" : "asynccorebluetooth",
@@ -26,6 +26,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "10845e90f870a20c5b0a0471a28c8bff8ca2027a"
+      }
+    },
+    {
+      "identity" : "swift-async-algorithms",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-async-algorithms.git",
+      "state" : {
+        "revision" : "9d349bcc328ac3c31ce40e746b5882742a0d1272",
+        "version" : "1.1.3"
       }
     },
     {
