@@ -1,5 +1,5 @@
 {
-  "originHash" : "61564adbf15b87bd779e1d4b581d1f3411e12982bb8810503e2c0c15efad48f8",
+  "originHash" : "2f427b966a2dd24a97e356316ffc4db7589f561e68c2a356ae9386f1e0012cf3",
   "pins" : [
     {
       "identity" : "asynccorebluetooth",
@@ -20,15 +20,6 @@
       }
     },
     {
-      "identity" : "combine-schedulers",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pointfreeco/combine-schedulers",
-      "state" : {
-        "revision" : "fd16d76fd8b9a976d88bfb6cacc05ca8d19c91b6",
-        "version" : "1.1.0"
-      }
-    },
-    {
       "identity" : "ios-corebluetooth-mock",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/meech-ward/IOS-CoreBluetooth-Mock.git",
@@ -44,24 +35,6 @@
       "state" : {
         "revision" : "c11818f3cae0780656baa430b49e7f163f08dffd",
         "version" : "1.1.6"
-      }
-    },
-    {
-      "identity" : "swift-concurrency-extras",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pointfreeco/swift-concurrency-extras",
-      "state" : {
-        "revision" : "5a3825302b1a0d744183200915a47b508c828e6f",
-        "version" : "1.3.2"
-      }
-    },
-    {
-      "identity" : "xctest-dynamic-overlay",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/pointfreeco/xctest-dynamic-overlay",
-      "state" : {
-        "revision" : "34e463e98ab8541c604af706c99bed7160f5ec70",
-        "version" : "1.8.1"
       }
     }
   ],

@@ -5,20 +5,21 @@
 //  Created by Tony Tallman on 5/5/26.
 //
 
+import AsyncCoreBluetooth
 @preconcurrency import Combine
-@preconcurrency import CoreBluetooth
+import CoreBluetooth
 import Foundation
 
-// MARK: CoreBluetooth bridging (executor handoff only)
+// MARK: - Combine bootstrap
 
-/// Tuples bridged CoreBluetooth callbacks into ``Sensor``. Use only immediately on arrival at the actor.
-private struct UnsafeCharacteristicTuples: @unchecked Sendable {
-    let tuples: [(CBUUID, CBCharacteristic)]
+private struct NotificationKey: Hashable {
+    let service: CBUUID
+    let characteristic: CBUUID
 }
 
-/// Notification pipeline bootstrap created on the actor, then surfaced to Combine synchronously via ``@unchecked Sendable``.
+/// Bundles notification pipeline pieces created on the actor for Combine ``subscribe``.
 private struct SubscribeBootstrap: @unchecked Sendable {
-    let characteristic: CBCharacteristic
+    let key: NotificationKey
     let subject: PassthroughSubject<Data, Error>
 }
 
@@ -36,125 +37,100 @@ private final class UncheckedFutureFulfill<Output, Failure: Error>: @unchecked S
     }
 }
 
-// MARK: - Delegate forwarder
-
-/// Bridges CoreBluetooth's delegate callbacks (non-async, non-isolated protocol) onto the ``Sensor`` actor.
-fileprivate final class Forwarder: NSObject, CBPeripheralDelegate, @unchecked Sendable {
-
-    weak var sensor: Sensor?
-
-    override init() {
-        super.init()
-    }
-
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard let sensor else { return }
-        let mappedError = error.map { Sensor.mapError($0) }
-        Task {
-            await sensor.handleDidDiscoverServices(error: mappedError)
-        }
-    }
-
-    func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        guard let sensor else { return }
-        let serviceObjectId = ObjectIdentifier(service)
-        let serviceUUID = service.uuid
-        let characteristics: [(CBUUID, CBCharacteristic)] = (service.characteristics ?? []).map { ($0.uuid, $0) }
-        let mappedError = error.map { Sensor.mapError($0) }
-        Task {
-            let boxed = UnsafeCharacteristicTuples(tuples: characteristics)
-            await sensor.handleDidDiscoverCharacteristics(
-                serviceObjectId: serviceObjectId,
-                serviceUUID: serviceUUID,
-                entries: boxed,
-                error: mappedError
-            )
-        }
-    }
-
-    func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard let sensor else { return }
-        let charId = ObjectIdentifier(characteristic)
-        let payload = characteristic.value ?? Data()
-        let mappedError = error.map { Sensor.mapError($0) }
-        Task {
-            await sensor.handleDidUpdateValue(characteristicId: charId, payload: payload, error: mappedError)
-        }
-    }
-
-    func peripheral(_ peripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard let sensor else { return }
-        let charId = ObjectIdentifier(characteristic)
-        let mappedError = error.map { Sensor.mapError($0) }
-        Task {
-            await sensor.handleDidWriteValue(characteristicId: charId, error: mappedError)
-        }
-    }
-
-    func peripheral(
-        _ peripheral: CBPeripheral,
-        didUpdateNotificationStateFor characteristic: CBCharacteristic,
-        error: Error?
-    ) {
-        guard let sensor else { return }
-        let charId = ObjectIdentifier(characteristic)
-        let mappedError = error.map { Sensor.mapError($0) }
-        Task {
-            await sensor.handleDidUpdateNotificationState(characteristicId: charId, error: mappedError)
-        }
-    }
-}
-
 // MARK: - Sensor actor
 
-/// Owns `CBPeripheral`'s delegate (via ``Forwarder``) and exposes async read/write plus Combine notifies.
+/// Wraps ``AsyncCoreBluetooth/Peripheral`` and exposes async read/write plus Combine notifications.
 ///
-/// State is serialized through actor isolation; no mutex is required on the Swift side.
+/// State is serialized through actor isolation; BLE delegate bridging lives in `AsyncCoreBluetooth`.
 ///
-/// - Important: Delegate callbacks arrive as independent `Task`s on this actor. If multiple ``read`` calls on the
-///   same characteristic are in flight at once, the order in which they complete is not guaranteed—issue reads
-///   sequentially when ordering matters.
+/// - Important: If multiple ``read`` calls on the same characteristic are in flight at once, completion
+///   order is not guaranteed—issue reads sequentially when ordering matters.
 package actor Sensor {
 
-    nonisolated let peripheral: CBPeripheral
-    nonisolated private let forwarder: Forwarder
+    nonisolated let peripheral: Peripheral
 
     /// Keyed by service UUID, then characteristic UUID.
-    private var characteristics: [CBUUID: [CBUUID: CBCharacteristic]] = [:]
+    private var characteristics: [CBUUID: [CBUUID: Characteristic]] = [:]
 
-    private var readContinuations: [ObjectIdentifier: [CheckedContinuation<Data, Error>]] = [:]
-    private var writeContinuations: [ObjectIdentifier: [CheckedContinuation<Void, Error>]] = [:]
+    private var notificationSubjects: [NotificationKey: PassthroughSubject<Data, Error>] = [:]
+    private var notificationRefCount: [NotificationKey: Int] = [:]
+    private var notificationListenTasks: [NotificationKey: Task<Void, Never>] = [:]
 
-    private var notificationSubjects: [ObjectIdentifier: PassthroughSubject<Data, Error>] = [:]
-    private var notificationRefCount: [ObjectIdentifier: Int] = [:]
+    /// Observes ``Peripheral/connectionState`` so disconnect can tear down notification pipelines.
+    /// Stored `nonisolated(unsafe)` so cancellation does not require actor `deinit` access rules.
+    nonisolated(unsafe) private var connectionStateTask: Task<Void, Never>?
 
-    // Discovery (init)
-    private var discoverServicesContinuation: CheckedContinuation<Void, Error>?
-    private var discoverCharacteristicsContinuation: CheckedContinuation<Void, Error>?
-    private var discoverCharacteristicsServiceId: ObjectIdentifier?
-
-    package init(peripheral: CBPeripheral) async throws {
+    package init(peripheral: Peripheral) async throws {
         self.peripheral = peripheral
-        self.forwarder = Forwarder()
-        forwarder.sensor = self
-        peripheral.delegate = forwarder
+        startConnectionStateObservation()
+        try await discoverAllServicesAndCharacteristics()
+    }
 
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            self.discoverServicesContinuation = continuation
-            peripheral.discoverServices(nil)
+    private func discoverAllServicesAndCharacteristics() async throws {
+        let services = try await mapErrors { try await peripheral.discoverServices(nil) }
+        var map: [CBUUID: [CBUUID: Characteristic]] = [:]
+        for (serviceUUID, service) in services {
+            let chars = try await mapErrors {
+                try await peripheral.discoverCharacteristics(nil, for: service)
+            }
+            map[serviceUUID] = chars
         }
-        discoverServicesContinuation = nil
+        characteristics = map
+    }
 
-        let services = peripheral.services ?? []
-        for service in services {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                self.discoverCharacteristicsContinuation = continuation
-                self.discoverCharacteristicsServiceId = ObjectIdentifier(service)
-                peripheral.discoverCharacteristics(nil, for: service)
+    private func mapErrors<T>(_ operation: () async throws -> T) async throws -> T {
+        do {
+            return try await operation()
+        } catch {
+            throw Self.mapError(error)
+        }
+    }
+
+    /// Starts (or replaces) the disconnect observer. Safe to call once from ``init(peripheral:)``.
+    private func startConnectionStateObservation() {
+        connectionStateTask?.cancel()
+        let watchedPeripheral = peripheral
+        connectionStateTask = Task {
+            var wasConnected = false
+            for await state in await watchedPeripheral.connectionState.stream {
+                if Task.isCancelled {
+                    break
+                }
+                switch state {
+                case .connected:
+                    wasConnected = true
+                case .disconnected(let cbError):
+                    if wasConnected {
+                        await handleDisconnect(cbError: cbError)
+                        wasConnected = false
+                    }
+                default:
+                    break
+                }
             }
         }
-        discoverCharacteristicsContinuation = nil
-        discoverCharacteristicsServiceId = nil
+    }
+
+    private func handleDisconnect(cbError: CBError?) async {
+        let sensorError: SensorError =
+            if let cbError {
+                .underlying(cbError)
+            } else {
+                .disconnected
+            }
+
+        for (_, task) in notificationListenTasks {
+            task.cancel()
+        }
+        notificationListenTasks.removeAll()
+
+        let subjects = notificationSubjects
+        notificationSubjects.removeAll()
+        notificationRefCount.removeAll()
+
+        for (_, subject) in subjects {
+            subject.send(completion: .failure(sensorError))
+        }
     }
 
     // MARK: Lookup
@@ -167,7 +143,7 @@ package actor Sensor {
         characteristics[service]?[characteristic] != nil
     }
 
-    private func requireCharacteristic(_ uuid: CBUUID, in service: CBUUID) throws -> CBCharacteristic {
+    private func requireCharacteristic(_ uuid: CBUUID, in service: CBUUID) throws -> Characteristic {
         guard characteristics[service] != nil else {
             throw SensorError.serviceNotFound(service)
         }
@@ -181,10 +157,8 @@ package actor Sensor {
 
     package func read(_ uuid: CBUUID, in service: CBUUID) async throws -> Data {
         let ch = try requireCharacteristic(uuid, in: service)
-        let id = ObjectIdentifier(ch)
-        return try await withCheckedThrowingContinuation { continuation in
-            readContinuations[id, default: []].append(continuation)
-            peripheral.readValue(for: ch)
+        return try await mapErrors {
+            try await peripheral.readValue(for: ch)
         }
     }
 
@@ -195,17 +169,15 @@ package actor Sensor {
         type: CBCharacteristicWriteType = .withResponse
     ) async throws {
         let ch = try requireCharacteristic(uuid, in: service)
-        let id = ObjectIdentifier(ch)
         switch type {
         case .withResponse:
-            try await withCheckedThrowingContinuation { continuation in
-                writeContinuations[id, default: []].append(continuation)
-                peripheral.writeValue(data, for: ch, type: type)
+            try await mapErrors {
+                try await peripheral.writeValueWithResponse(data, for: ch)
             }
         case .withoutResponse:
-            peripheral.writeValue(data, for: ch, type: type)
+            await peripheral.writeValueWithoutResponse(data, for: ch)
         @unknown default:
-            peripheral.writeValue(data, for: ch, type: type)
+            await peripheral.writeValueWithoutResponse(data, for: ch)
         }
     }
 
@@ -234,14 +206,11 @@ package actor Sensor {
                 .handleEvents(
                     receiveSubscription: { _ in
                         Task {
-                            await sensor.incrementNotification(
-                                for: bootstrap.characteristic,
-                                subject: bootstrap.subject
-                            )
+                            await sensor.incrementNotification(for: bootstrap.key)
                         }
                     },
                     receiveCancel: {
-                        Task { await sensor.decrementNotification(for: bootstrap.characteristic) }
+                        Task { await sensor.decrementNotification(for: bootstrap.key) }
                     }
                 )
                 .eraseToAnyPublisher()
@@ -250,152 +219,95 @@ package actor Sensor {
         .eraseToAnyPublisher()
     }
 
-    /// Bundles characteristic resolution and subject registration for Combine ``subscribe``.
     fileprivate func makeSubscribeBootstrap(for uuid: CBUUID, in service: CBUUID) async throws -> SubscribeBootstrap {
-        let characteristic = try requireCharacteristic(uuid, in: service)
-        let subject = prepareNotificationSubject(for: characteristic)
-        return SubscribeBootstrap(characteristic: characteristic, subject: subject)
+        _ = try requireCharacteristic(uuid, in: service)
+        let key = NotificationKey(service: service, characteristic: uuid)
+        let subject = prepareNotificationSubject(for: key)
+        return SubscribeBootstrap(key: key, subject: subject)
     }
 
-    /// Returns the existing subject for this characteristic, or creates and stores one so every subscriber shares the same pipeline.
-    private func prepareNotificationSubject(for char: CBCharacteristic) -> PassthroughSubject<Data, Error> {
-        let id = ObjectIdentifier(char)
-        if let existing = notificationSubjects[id] {
+    private func prepareNotificationSubject(for key: NotificationKey) -> PassthroughSubject<Data, Error> {
+        if let existing = notificationSubjects[key] {
             return existing
         }
         let created = PassthroughSubject<Data, Error>()
-        notificationSubjects[id] = created
+        notificationSubjects[key] = created
         return created
     }
 
-    fileprivate func incrementNotification(for char: CBCharacteristic, subject: PassthroughSubject<Data, Error>) {
-        let id = ObjectIdentifier(char)
-        let next = (notificationRefCount[id] ?? 0) + 1
-        notificationRefCount[id] = next
-        if next == 1 {
-            // Ensure the live subject is the one we're using (may already be stored by prepareNotificationSubject).
-            notificationSubjects[id] = subject
-            peripheral.setNotifyValue(true, for: char)
+    fileprivate func incrementNotification(for key: NotificationKey) async {
+        guard let characteristic = characteristics[key.service]?[key.characteristic] else { return }
+
+        let next = (notificationRefCount[key] ?? 0) + 1
+        notificationRefCount[key] = next
+
+        guard next == 1 else { return }
+
+        do {
+            _ = try await mapErrors {
+                try await peripheral.setNotifyValue(true, for: characteristic)
+            }
+        } catch {
+            notificationRefCount[key] = nil
+            notificationSubjects[key]?.send(completion: .failure(error))
+            notificationSubjects[key] = nil
+            return
+        }
+
+        notificationListenTasks[key] = Task {
+            await self.runNotificationListeningLoop(key: key, characteristic: characteristic)
         }
     }
 
-    fileprivate func decrementNotification(for char: CBCharacteristic) {
-        let id = ObjectIdentifier(char)
-        guard let current = notificationRefCount[id], current > 0 else { return }
+    fileprivate func decrementNotification(for key: NotificationKey) async {
+        guard let current = notificationRefCount[key], current > 0 else { return }
         let next = current - 1
         if next == 0 {
-            notificationRefCount[id] = nil
-            notificationSubjects[id] = nil
-            peripheral.setNotifyValue(false, for: char)
+            notificationRefCount[key] = nil
+            notificationListenTasks[key]?.cancel()
+            notificationListenTasks[key] = nil
+            notificationSubjects[key] = nil
+
+            if let characteristic = characteristics[key.service]?[key.characteristic] {
+                _ = try? await peripheral.setNotifyValue(false, for: characteristic)
+            }
         } else {
-            notificationRefCount[id] = next
+            notificationRefCount[key] = next
         }
     }
 
-    // MARK: - Continuation helpers
+    private func runNotificationListeningLoop(key: NotificationKey, characteristic: Characteristic) async {
+        // Give AsyncObservable/stream registration a chance to run before mock-driven updates land.
+        await Task.yield()
+        await Task.yield()
+
+        let cachedSnapshot = await characteristic.value.raw
+        var skipFirstReplayFromCache = false
+        if let cachedSnapshot, !cachedSnapshot.isEmpty {
+            skipFirstReplayFromCache = true
+        }
+
+        for await data in await characteristic.value.stream {
+            if Task.isCancelled {
+                break
+            }
+            if skipFirstReplayFromCache {
+                skipFirstReplayFromCache = false
+                continue
+            }
+            notificationSubjects[key]?.send(data)
+        }
+    }
+
+    // MARK: Errors
 
     fileprivate nonisolated static func mapError(_ error: Error) -> SensorError {
-        if let e = error as? SensorError { return e }
+        if let existing = error as? SensorError {
+            return existing
+        }
+        if let peripheralError = error as? PeripheralConnectionError, peripheralError == .disconnectedWhileWorking {
+            return .disconnected
+        }
         return .underlying(error)
-    }
-
-    private func dequeueReadContinuation(for id: ObjectIdentifier) -> CheckedContinuation<Data, Error>? {
-        guard var queue = readContinuations[id], !queue.isEmpty else { return nil }
-        let first = queue.removeFirst()
-        if queue.isEmpty {
-            readContinuations[id] = nil
-        } else {
-            readContinuations[id] = queue
-        }
-        return first
-    }
-
-    private func dequeueWriteContinuation(for id: ObjectIdentifier) -> CheckedContinuation<Void, Error>? {
-        guard var queue = writeContinuations[id], !queue.isEmpty else { return nil }
-        let first = queue.removeFirst()
-        if queue.isEmpty {
-            writeContinuations[id] = nil
-        } else {
-            writeContinuations[id] = queue
-        }
-        return first
-    }
-
-    // MARK: Forwarder handlers
-
-    fileprivate func handleDidDiscoverServices(error: SensorError?) async {
-        guard let continuation = discoverServicesContinuation else { return }
-        discoverServicesContinuation = nil
-        if let error {
-            continuation.resume(throwing: error)
-        } else {
-            continuation.resume()
-        }
-    }
-
-    fileprivate func handleDidDiscoverCharacteristics(
-        serviceObjectId: ObjectIdentifier,
-        serviceUUID: CBUUID,
-        entries boxed: UnsafeCharacteristicTuples,
-        error: SensorError?
-    ) async {
-        guard discoverCharacteristicsServiceId == serviceObjectId,
-              let continuation = discoverCharacteristicsContinuation else { return }
-
-        discoverCharacteristicsContinuation = nil
-        discoverCharacteristicsServiceId = nil
-
-        if let error {
-            continuation.resume(throwing: error)
-            return
-        }
-
-        var byChar = characteristics[serviceUUID] ?? [:]
-        for (uuid, ch) in boxed.tuples {
-            byChar[uuid] = ch
-        }
-        characteristics[serviceUUID] = byChar
-        continuation.resume()
-    }
-
-    fileprivate func handleDidUpdateValue(
-        characteristicId: ObjectIdentifier,
-        payload: Data,
-        error: SensorError?
-    ) async {
-        if let error {
-            if let readContinuation = dequeueReadContinuation(for: characteristicId) {
-                readContinuation.resume(throwing: error)
-                return
-            }
-            notificationSubjects[characteristicId]?.send(completion: .failure(error))
-            return
-        }
-
-        if let readContinuation = dequeueReadContinuation(for: characteristicId) {
-            readContinuation.resume(returning: payload)
-            return
-        }
-        notificationSubjects[characteristicId]?.send(payload)
-    }
-
-    fileprivate func handleDidWriteValue(characteristicId: ObjectIdentifier, error: SensorError?) async {
-        guard let writeContinuation = dequeueWriteContinuation(for: characteristicId) else { return }
-        if let error {
-            writeContinuation.resume(throwing: error)
-        } else {
-            writeContinuation.resume()
-        }
-    }
-
-    fileprivate func handleDidUpdateNotificationState(characteristicId: ObjectIdentifier, error: SensorError?) async {
-        #if DEBUG
-        if let error {
-            debugPrint("Sensor: notification state update failed for characteristic object \(characteristicId): \(error)")
-        }
-        #endif
-        if let error {
-            notificationSubjects[characteristicId]?.send(completion: .failure(error))
-        }
     }
 }
