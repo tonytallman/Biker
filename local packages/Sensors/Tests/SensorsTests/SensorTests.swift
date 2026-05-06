@@ -1,9 +1,9 @@
 import Sensors
 import Testing
 
-struct SensorsTests {
+struct SensorTests {
     @Test func sensorsModuleLoads() {
-        let typeName = String(describing: Sensors.self)
-        #expect(typeName == "Sensors")
+        let typeName = String(describing: Sensor.self)
+        #expect(typeName == "Sensor")
     }
 }
