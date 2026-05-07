@@ -58,7 +58,7 @@ private final class DataBucket: @unchecked Sendable {
 @Suite(.serialized)
 struct SensorTests {
 
-    private struct Harness {
+    struct Harness {
         let central: CentralManager
         let peripheral: Peripheral
         let sensor: Sensor
@@ -66,7 +66,7 @@ struct SensorTests {
         let delegate: HeartRatePeripheralDelegate
     }
 
-    private func makeHarness(delegate: HeartRatePeripheralDelegate = HeartRatePeripheralDelegate()) async throws -> Harness {
+    func makeHarness(delegate: HeartRatePeripheralDelegate = HeartRatePeripheralDelegate()) async throws -> Harness {
         CBMCentralManagerMock.simulateInitialState(.poweredOff)
         let spec = MockBLEPeripheral.makeSpec(delegate: delegate)
         CBMCentralManagerMock.simulatePeripherals([spec])
@@ -92,7 +92,7 @@ struct SensorTests {
     }
 
     /// Same BLE harness without constructing ``Sensor`` — used to verify notify simulation independent of `Sensor`.
-    private func makeConnectedPeripheralHarness(
+    func makeConnectedPeripheralHarness(
         delegate: HeartRatePeripheralDelegate = HeartRatePeripheralDelegate()
     ) async throws -> (central: CentralManager, peripheral: Peripheral, spec: CBMPeripheralSpec, delegate: HeartRatePeripheralDelegate) {
         CBMCentralManagerMock.simulateInitialState(.poweredOff)
@@ -157,20 +157,20 @@ struct SensorTests {
         #expect(box.load() == payload)
     }
 
-    private enum HarnessError: Error {
+    enum HarnessError: Error {
         case missingPeripheral
     }
 
-    private func sleepShort() async throws {
+    func sleepShort() async throws {
         try await Task.sleep(nanoseconds: 100_000_000)
     }
 
-    private enum NotifyWaitError: Error {
+    enum NotifyWaitError: Error {
         case timedOut
     }
 
     /// Waits until the mock ATT delegate records a **latest** measurement notify-enable (avoids matching stale `true` entries left in ``HeartRatePeripheralDelegate/notifyTransitions``).
-    private func waitForMeasurementNotifyEnabled(
+    func waitForMeasurementNotifyEnabled(
         h: Harness,
         minimumPriorTransitions: Int? = nil
     ) async throws {
@@ -484,6 +484,218 @@ struct SensorTests {
         try await Task.sleep(nanoseconds: 100_000_000)
 
         #expect(counter.value == 0)
+    }
+
+    // MARK: - GATT layer (BLE — before zz_disconnect; ordering matters for mock isolation)
+
+    @Test func gatt_adapter_discoverAllMatchesHeartRateLayout() async throws {
+        let h = try await makeHarness()
+        let gatt = AsyncCoreBluetoothGATTPeripheral(h.peripheral)
+        let catalog = try await gatt.discoverAll()
+
+        #expect(catalog.has(service: MockBLEPeripheral.serviceUUID))
+        #expect(catalog.has(characteristic: MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID))
+        #expect(catalog.has(characteristic: MockBLEPeripheral.controlUUID, in: MockBLEPeripheral.serviceUUID))
+    }
+
+    @Test func gatt_adapter_readReturnsDelegatePayload() async throws {
+        let delegate = HeartRatePeripheralDelegate()
+        let expected = Data([0x16, 120])
+        delegate.measurementReadPayload = expected
+
+        let h = try await makeHarness(delegate: delegate)
+        let gatt = AsyncCoreBluetoothGATTPeripheral(h.peripheral)
+        let catalog = try await gatt.discoverAll()
+        let ch = try catalog.require(MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID)
+
+        let data = try await gatt.read(ch)
+        #expect(data == expected)
+    }
+
+    @Test func gatt_adapter_writeWithResponseRoundTrips() async throws {
+        let h = try await makeHarness()
+        let gatt = AsyncCoreBluetoothGATTPeripheral(h.peripheral)
+        let catalog = try await gatt.discoverAll()
+        let ch = try catalog.require(MockBLEPeripheral.controlUUID, in: MockBLEPeripheral.serviceUUID)
+
+        let payload = Data([0x07])
+        try await gatt.write(payload, to: ch, type: .withResponse)
+
+        #expect(h.delegate.lastWrittenControlPayload == payload)
+    }
+
+    @Test func gatt_adapter_setNotifyAndValueStreamDeliverNotifications() async throws {
+        let h = try await makeHarness()
+        let gatt = AsyncCoreBluetoothGATTPeripheral(h.peripheral)
+        let catalog = try await gatt.discoverAll()
+        let ch = try catalog.require(MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID)
+
+        _ = try await gatt.setNotify(true, for: ch)
+
+        let stream = gatt.valueStream(for: ch)
+        let box = ValueBox<Data>()
+        let task = Task {
+            for await value in stream {
+                box.store(value)
+                break
+            }
+        }
+        defer { task.cancel() }
+
+        try await Task.sleep(nanoseconds: 20_000_000)
+
+        let payload = Data([0x06, 70])
+        h.spec.simulateValueUpdate(payload, for: MockBLEPeripheral.measurementCharacteristic)
+
+        try await sleepShort()
+
+        #expect(box.load() == payload)
+    }
+
+    @Test func gatt_any_forwardsMethods() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let stub = GATTPeripheralStub(catalog: catalog, primaryCharacteristic: measurement, controlCharacteristic: control)
+        let any = stub.eraseToAnyGATTPeripheral()
+
+        let discovered = try await any.discoverAll()
+        #expect(discovered.has(service: MockBLEPeripheral.serviceUUID))
+
+        _ = try await any.read(measurement)
+        try await any.setNotify(true, for: measurement)
+        _ = any.valueStream(for: measurement)
+    }
+
+    @Test func gatt_any_eraseToAnyGATTPeripheral_isIdempotent() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let stub = GATTPeripheralStub(catalog: catalog, primaryCharacteristic: measurement, controlCharacteristic: control)
+        let a = stub.eraseToAnyGATTPeripheral()
+        let b = a.eraseToAnyGATTPeripheral()
+        #expect(a === b)
+    }
+
+    @Test func gatt_serialized_forwardsAllMethods() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let stub = GATTPeripheralStub(catalog: catalog, primaryCharacteristic: measurement, controlCharacteristic: control)
+        stub.readPayload = Data([0xDE, 0xAD])
+
+        let gatt = SerializedGATTPeripheral(stub)
+
+        let discovered = try await gatt.discoverAll()
+        #expect(discovered.has(service: MockBLEPeripheral.serviceUUID))
+
+        let readBack = try await gatt.read(measurement)
+        #expect(readBack == Data([0xDE, 0xAD]))
+
+        try await gatt.write(Data([0x03]), to: control, type: .withResponse)
+        #expect(stub.lastWritePayload == Data([0x03]))
+
+        try await gatt.setNotify(true, for: measurement)
+        #expect(stub.lastNotifyEnabled == true)
+
+        let stream = gatt.valueStream(for: measurement)
+        let box = ValueBox<Data>()
+        let task = Task {
+            for await value in stream {
+                box.store(value)
+                break
+            }
+        }
+        defer { task.cancel() }
+
+        try await Task.sleep(nanoseconds: 20_000_000)
+        stub.sendNotify(Data([0xFE]))
+        try await Task.sleep(nanoseconds: 80_000_000)
+        #expect(box.load() == Data([0xFE]))
+    }
+
+    @Test func gatt_serialized_serializesConcurrentReads() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let detector = OverlapDetector()
+        let stub = GATTPeripheralStub(
+            catalog: catalog,
+            primaryCharacteristic: measurement,
+            controlCharacteristic: control
+        )
+        stub.overlapDetector = detector
+        stub.readSleepNanoseconds = 2_000_000
+
+        let gatt = SerializedGATTPeripheral(stub)
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0 ..< 12 {
+                group.addTask {
+                    _ = try? await gatt.read(measurement)
+                }
+            }
+        }
+
+        #expect(!detector.overlapOccurred)
+    }
+
+    @Test func gatt_serialized_valueStreamForwardsDirectly() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let stub = GATTPeripheralStub(catalog: catalog, primaryCharacteristic: measurement, controlCharacteristic: control)
+        let gatt = SerializedGATTPeripheral(stub)
+
+        let fromDecorator = gatt.valueStream(for: measurement)
+        let decoratorBox = ValueBox<Data>()
+        let decoratorTask = Task {
+            for await value in fromDecorator {
+                decoratorBox.store(value)
+                break
+            }
+        }
+        defer { decoratorTask.cancel() }
+
+        try await Task.sleep(nanoseconds: 20_000_000)
+        stub.sendNotify(Data([0x11, 0x22]))
+        try await Task.sleep(nanoseconds: 80_000_000)
+        #expect(decoratorBox.load() == Data([0x11, 0x22]))
+
+        let fromStub = stub.valueStream(for: measurement)
+        let stubBox = ValueBox<Data>()
+        let stubTask = Task {
+            for await value in fromStub {
+                stubBox.store(value)
+                break
+            }
+        }
+        defer { stubTask.cancel() }
+
+        try await Task.sleep(nanoseconds: 20_000_000)
+        stub.sendNotify(Data([0x33, 0x44]))
+        try await Task.sleep(nanoseconds: 80_000_000)
+        #expect(stubBox.load() == Data([0x33, 0x44]))
+    }
+
+    @Test func gatt_serialized_propagatesThrownErrorsAndRecovers() async throws {
+        let (catalog, measurement, control) = try await gattCatalogMeasurementAndControl()
+
+        let stub = GATTPeripheralStub(catalog: catalog, primaryCharacteristic: measurement, controlCharacteristic: control)
+        let gatt = SerializedGATTPeripheral(stub)
+
+        stub.readThrows = SensorError.disconnected
+
+        do {
+            _ = try await gatt.read(measurement)
+            Issue.record("expected throw")
+        } catch let error as SensorError {
+            guard case .disconnected = error else {
+                Issue.record("unexpected \(error)")
+                return
+            }
+        } catch {
+            Issue.record("unexpected \(error)")
+        }
+
+        stub.readThrows = nil
+        let data = try await gatt.read(measurement)
+        #expect(data == stub.readPayload)
     }
 
     /// Runs last in this suite so earlier notify/ref-count tests don’t inherit disconnect/mock fallout.
