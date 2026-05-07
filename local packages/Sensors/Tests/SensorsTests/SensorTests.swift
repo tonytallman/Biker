@@ -408,8 +408,86 @@ struct SensorTests {
         task2.cancel()
     }
 
+    // MARK: - Extracted primitives (BLE — keep in this serialized suite with other CoreBluetoothMock tests)
+
+    @Test func primitives_serviceDiscoverer_matchesHeartRateLayout() async throws {
+        let h = try await makeHarness()
+        let catalog = try await ServiceDiscoverer.discoverAll(on: h.peripheral)
+
+        #expect(catalog.has(service: MockBLEPeripheral.serviceUUID))
+        _ = try catalog.require(MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID)
+        _ = try catalog.require(MockBLEPeripheral.controlUUID, in: MockBLEPeripheral.serviceUUID)
+    }
+
+    @Test func primitives_characteristicCatalog_discovery_matchesHeartRateLayout() async throws {
+        let h = try await makeHarness()
+        let catalog = try await ServiceDiscoverer.discoverAll(on: h.peripheral)
+
+        #expect(catalog.has(service: MockBLEPeripheral.serviceUUID))
+        #expect(catalog.has(characteristic: MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID))
+        #expect(catalog.has(characteristic: MockBLEPeripheral.controlUUID, in: MockBLEPeripheral.serviceUUID))
+
+        _ = try catalog.require(MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID)
+    }
+
+    @Test func primitives_connectionLifecycleObserver_emitsDisconnectAfterWasConnected() async throws {
+        let h = try await makeHarness()
+
+        let observer = ConnectionLifecycleObserver(peripheral: h.peripheral)
+
+        let counter = EmissionCounter()
+
+        let waiter = Task {
+            for await _ in observer.disconnects {
+                counter.record()
+            }
+        }
+        defer { waiter.cancel() }
+
+        try await sleepShort()
+
+        _ = await h.central.cancelPeripheralConnection(h.peripheral)
+
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        #expect(counter.value == 1)
+    }
+
+    @Test func primitives_connectionLifecycleObserver_noEmitWhenNeverConnected() async throws {
+        CBMCentralManagerMock.simulateInitialState(.poweredOff)
+        let spec = MockBLEPeripheral.makeSpec(delegate: HeartRatePeripheralDelegate())
+        CBMCentralManagerMock.simulatePeripherals([spec])
+        CBMCentralManagerMock.simulateInitialState(.poweredOn)
+
+        let central = CentralManager(forceMock: true)
+        for await state in await central.start() where state == .poweredOn {
+            break
+        }
+
+        let peripherals = await central.retrievePeripherals(withIdentifiers: [spec.identifier])
+        guard let peripheral = peripherals.first else {
+            Issue.record("retrievePeripherals returned empty")
+            return
+        }
+
+        let observer = ConnectionLifecycleObserver(peripheral: peripheral)
+
+        let counter = EmissionCounter()
+
+        let waiter = Task {
+            for await _ in observer.disconnects {
+                counter.record()
+            }
+        }
+        defer { waiter.cancel() }
+
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        #expect(counter.value == 0)
+    }
+
     /// Runs last in this suite so earlier notify/ref-count tests don’t inherit disconnect/mock fallout.
-    @Test func disconnect_completesSubscriberWithDisconnected() async throws {
+    @Test func zz_disconnect_completesSubscriberWithDisconnected() async throws {
         let h = try await makeHarness()
 
         let capture = CompletionHolder()
