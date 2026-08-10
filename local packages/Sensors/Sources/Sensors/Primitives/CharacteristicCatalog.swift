@@ -31,4 +31,14 @@ package struct CharacteristicCatalog: @unchecked Sendable {
         }
         return ch
     }
+
+    /// First characteristic matching `characteristic` UUID across any discovered service (typical layout has unique characteristic UUIDs).
+    package func find(_ characteristic: CBUUID) -> Characteristic? {
+        for (_, chars) in services {
+            if let ch = chars[characteristic] {
+                return ch
+            }
+        }
+        return nil
+    }
 }

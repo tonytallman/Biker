@@ -42,6 +42,8 @@ final class RecordingSensorPeripheralStub: @unchecked Sendable {
     var hasResult = true
     var readResult: Data? = Data([0x01, 0x02])
 
+    private(set) var subscribeCallCount = 0
+
     private let dataContinuation: AsyncStream<Data>.Continuation
     private let dataStream: AsyncStream<Data>
 
@@ -80,6 +82,7 @@ extension RecordingSensorPeripheralStub: SensorPeripheral {
     }
 
     func subscribeTo(characteristicId: String) -> AsyncStream<Data> {
-        dataStream
+        subscribeCallCount += 1
+        return dataStream
     }
 }

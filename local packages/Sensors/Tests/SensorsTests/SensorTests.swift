@@ -698,6 +698,43 @@ struct SensorTests {
         #expect(data == stub.readPayload)
     }
 
+    @Test func sensor_gatt_initInjectsStack() async throws {
+        let h = try await makeConnectedPeripheralHarness()
+        let gatt = SerializedGATTPeripheral(AsyncCoreBluetoothGATTPeripheral(h.peripheral))
+        let catalog = try await gatt.discoverAll()
+        let lifecycle = ConnectionLifecycleObserver(peripheral: h.peripheral)
+        let sensor = try await Sensor(
+            gatt: gatt,
+            lifecycle: lifecycle,
+            catalog: catalog,
+            peripheral: h.peripheral
+        )
+
+        let data = try await sensor.read(MockBLEPeripheral.measurementUUID, in: MockBLEPeripheral.serviceUUID)
+        #expect(data == h.delegate.measurementReadPayload)
+
+        let stream = try await sensor.subscribe(
+            to: MockBLEPeripheral.measurementUUID,
+            in: MockBLEPeripheral.serviceUUID
+        )
+        let box = ValueBox<Data>()
+        let task = Task {
+            do {
+                for try await value in stream {
+                    box.store(value)
+                    break
+                }
+            } catch {}
+        }
+        defer { task.cancel() }
+
+        try await Task.sleep(nanoseconds: 40_000_000)
+        let payload = Data([0x06, 72])
+        h.spec.simulateValueUpdate(payload, for: MockBLEPeripheral.measurementCharacteristic)
+        try await sleepShort()
+        #expect(box.load() == payload)
+    }
+
     /// Runs last in this suite so earlier notify/ref-count tests don’t inherit disconnect/mock fallout.
     @Test func zz_disconnect_completesSubscriberWithDisconnected() async throws {
         let h = try await makeHarness()
